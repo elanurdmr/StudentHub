@@ -320,12 +320,16 @@ select.form-control { appearance: none; background-image: url("data:image/svg+xm
 .table tr:last-child td { border-bottom: none; }
 .table tr:hover td { background: var(--card); }
 
+/* ── Mobil arama kutusu (sidebar gizlenince göster) ── */
+.mobile-search-bar { display: none; margin-bottom: 1.25rem; }
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .layout-with-sidebar { grid-template-columns: 1fr; }
   .sidebar { display: none; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .mobile-search-bar { display: block; }
 }
 @media (max-width: 600px) {
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }

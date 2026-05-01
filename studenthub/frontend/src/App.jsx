@@ -16,6 +16,7 @@ import Notifications from './pages/Notifications.jsx';
 import Applications from './pages/Applications.jsx';
 import ReviewForm from './pages/ReviewForm.jsx';
 import Admin from './pages/Admin.jsx';
+import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/applications/:projectId" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
         <Route path="/review/:targetId" element={<ProtectedRoute><ReviewForm /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );

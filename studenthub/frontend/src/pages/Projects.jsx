@@ -26,6 +26,14 @@ export default function Projects() {
         <p style={{ color: 'var(--muted)' }}>Ekip arayan projeler, skill matching ile sana özel öneriler</p>
       </div>
 
+      {/* Mobil arama — sidebar gizlenince görünür */}
+      <div className="mobile-search-bar">
+        <div className="search-bar">
+          <span>🔍</span>
+          <input type="text" placeholder="Proje ara..." onChange={(e) => setQ(e.target.value)} />
+        </div>
+      </div>
+
       <div className="layout-with-sidebar">
         <FilterSidebar categories={CATEGORIES} selected={category} onSelect={setCategory} onSearch={setQ} searchPlaceholder="Proje ara..." />
 

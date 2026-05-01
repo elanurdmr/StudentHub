@@ -27,6 +27,14 @@ export default function Market() {
         <p style={{ color: 'var(--muted)' }}>Öğrenci hizmetlerini keşfet, satın al veya kendi hizmetini sun</p>
       </div>
 
+      {/* Mobil arama — sidebar gizlenince görünür */}
+      <div className="mobile-search-bar">
+        <div className="search-bar">
+          <span>🔍</span>
+          <input type="text" placeholder="Hizmet ara..." onChange={(e) => setQ(e.target.value)} />
+        </div>
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
         <select className="form-control" style={{ width: 'auto' }} value={sort} onChange={(e) => setSort(e.target.value)}>
           <option value="">Sırala: Yeni</option>

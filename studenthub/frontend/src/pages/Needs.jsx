@@ -26,6 +26,14 @@ export default function Needs() {
         <p style={{ color: 'var(--muted)' }}>Ters pazar: ilanları gör, teklifini ver</p>
       </div>
 
+      {/* Mobil arama — sidebar gizlenince görünür */}
+      <div className="mobile-search-bar">
+        <div className="search-bar">
+          <span>🔍</span>
+          <input type="text" placeholder="İhtiyaç ara..." onChange={(e) => setQ(e.target.value)} />
+        </div>
+      </div>
+
       <div className="layout-with-sidebar">
         <FilterSidebar categories={CATEGORIES} selected={category} onSelect={setCategory} onSearch={setQ} searchPlaceholder="İhtiyaç ara..." />
 

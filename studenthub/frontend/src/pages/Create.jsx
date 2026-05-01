@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { servicesAPI, needsAPI, projectsAPI } from '../api/client.js';
 
 const TYPES = [
@@ -12,10 +12,37 @@ const CATEGORIES = ['Tasarım', 'Yazılım', 'Akademik', 'Çeviri', 'Fotoğraf',
 
 export default function Create() {
   const navigate = useNavigate();
-  const [type, setType] = useState('service');
+  const [params] = useSearchParams();
+
+  const editType = params.get('edit');   // 'service' | 'need' | 'project' | null
+  const editId   = params.get('id');
+  const isEdit   = !!(editType && editId);
+
+  const [type, setType] = useState(editType || 'service');
   const [form, setForm] = useState({ title: '', description: '', category: '', price: '', budget: '', deliveryDays: '', teamSize: '', duration: '', requiredSkills: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  /* Edit modunda mevcut veriyi çek */
+  useEffect(() => {
+    if (!isEdit) return;
+    const getter = editType === 'service' ? servicesAPI.get(editId)
+      : editType === 'need' ? needsAPI.get(editId)
+      : projectsAPI.get(editId);
+    getter.then(({ data }) => {
+      setForm({
+        title: data.title || '',
+        description: data.description || '',
+        category: data.category || '',
+        price: data.price ?? '',
+        budget: data.budget ?? '',
+        deliveryDays: data.deliveryDays ?? '',
+        teamSize: data.teamSize ?? '',
+        duration: data.duration || '',
+        requiredSkills: (data.requiredSkills || []).join(', '),
+      });
+    }).catch(() => {});
+  }, [isEdit, editType, editId]);
 
   function handleChange(e) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -29,14 +56,17 @@ export default function Create() {
     try {
       let res;
       if (type === 'service') {
-        res = await servicesAPI.create({ title: form.title, description: form.description, category: form.category, price: Number(form.price), deliveryDays: Number(form.deliveryDays) || 3 });
+        const payload = { title: form.title, description: form.description, category: form.category, price: Number(form.price), deliveryDays: Number(form.deliveryDays) || 3 };
+        res = isEdit ? await servicesAPI.update(editId, payload) : await servicesAPI.create(payload);
         navigate(`/detail/service/${res.data._id}`);
       } else if (type === 'need') {
-        res = await needsAPI.create({ title: form.title, description: form.description, category: form.category, budget: Number(form.budget) });
+        const payload = { title: form.title, description: form.description, category: form.category, budget: Number(form.budget) };
+        res = isEdit ? await needsAPI.update(editId, payload) : await needsAPI.create(payload);
         navigate(`/detail/need/${res.data._id}`);
       } else {
         const skills = form.requiredSkills.split(',').map((s) => s.trim()).filter(Boolean);
-        res = await projectsAPI.create({ title: form.title, description: form.description, category: form.category, teamSize: Number(form.teamSize) || 3, duration: form.duration, requiredSkills: skills });
+        const payload = { title: form.title, description: form.description, category: form.category, teamSize: Number(form.teamSize) || 3, duration: form.duration, requiredSkills: skills };
+        res = isEdit ? await projectsAPI.update(editId, payload) : await projectsAPI.create(payload);
         navigate(`/detail/project/${res.data._id}`);
       }
     } catch (err) {
@@ -48,19 +78,25 @@ export default function Create() {
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem', maxWidth: 720 }}>
-      <h1 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, marginBottom: '.5rem' }}>Yeni İlan Oluştur</h1>
-      <p style={{ color: 'var(--muted)', marginBottom: '2rem' }}>Ne tür bir ilan vermek istersiniz?</p>
+      <h1 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, marginBottom: '.5rem' }}>
+        {isEdit ? 'İlanı Düzenle' : 'Yeni İlan Oluştur'}
+      </h1>
+      <p style={{ color: 'var(--muted)', marginBottom: '2rem' }}>
+        {isEdit ? 'Bilgileri güncelleyip kaydedin' : 'Ne tür bir ilan vermek istersiniz?'}
+      </p>
 
-      {/* Type selector */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem', marginBottom: '2rem' }}>
-        {TYPES.map((t) => (
-          <button key={t.value} onClick={() => setType(t.value)} style={{ padding: '1.25rem', border: `2px solid ${type === t.value ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius)', background: type === t.value ? '#eef2ff' : 'var(--card)', cursor: 'pointer', textAlign: 'center', transition: 'all .15s' }}>
-            <div style={{ fontSize: '1.75rem', marginBottom: '.5rem' }}>{t.icon}</div>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: type === t.value ? 'var(--accent)' : 'var(--ink)' }}>{t.label}</div>
-            <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginTop: '.25rem' }}>{t.desc}</div>
-          </button>
-        ))}
-      </div>
+      {/* Tip seçici — sadece yeni ilan oluştururken göster */}
+      {!isEdit && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem', marginBottom: '2rem' }}>
+          {TYPES.map((t) => (
+            <button key={t.value} onClick={() => setType(t.value)} style={{ padding: '1.25rem', border: `2px solid ${type === t.value ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius)', background: type === t.value ? '#eef2ff' : 'var(--card)', cursor: 'pointer', textAlign: 'center', transition: 'all .15s' }}>
+              <div style={{ fontSize: '1.75rem', marginBottom: '.5rem' }}>{t.icon}</div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: type === t.value ? 'var(--accent)' : 'var(--ink)' }}>{t.label}</div>
+              <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginTop: '.25rem' }}>{t.desc}</div>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="card" style={{ padding: '2rem' }}>
         {error && <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '.5rem', padding: '.75rem 1rem', marginBottom: '1rem', color: 'var(--coral)', fontSize: '.9rem' }}>{error}</div>}
@@ -120,9 +156,16 @@ export default function Create() {
             </>
           )}
 
-          <button className="btn btn-primary" type="submit" disabled={loading} style={{ marginTop: '.5rem' }}>
-            {loading ? 'Yayınlanıyor…' : 'İlanı Yayınla'}
-          </button>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '.5rem' }}>
+            <button className="btn btn-primary" type="submit" disabled={loading}>
+              {loading ? (isEdit ? 'Kaydediliyor…' : 'Yayınlanıyor…') : (isEdit ? 'Değişiklikleri Kaydet' : 'İlanı Yayınla')}
+            </button>
+            {isEdit && (
+              <button className="btn btn-secondary" type="button" onClick={() => navigate(-1)}>
+                Vazgeç
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>
