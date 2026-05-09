@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { servicesAPI, needsAPI, projectsAPI } from '../api/client.js';
+import { servicesAPI, needsAPI, projectsAPI, uploadAPI } from '../api/client.js';
 
 const TYPES = [
   { value: 'service', label: 'Hizmet', desc: 'Becerini sat', icon: '🛍' },
@@ -22,6 +22,8 @@ export default function Create() {
   const [form, setForm] = useState({ title: '', description: '', category: '', price: '', budget: '', deliveryDays: '', teamSize: '', duration: '', requiredSkills: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [serviceImage, setServiceImage] = useState('');
+  const [imageUploadBusy, setImageUploadBusy] = useState(false);
 
   /* Edit modunda mevcut veriyi çek */
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function Create() {
         duration: data.duration || '',
         requiredSkills: (data.requiredSkills || []).join(', '),
       });
+      if (editType === 'service' && data.image) setServiceImage(data.image);
     }).catch(() => {});
   }, [isEdit, editType, editId]);
 
@@ -56,7 +59,14 @@ export default function Create() {
     try {
       let res;
       if (type === 'service') {
-        const payload = { title: form.title, description: form.description, category: form.category, price: Number(form.price), deliveryDays: Number(form.deliveryDays) || 3 };
+        const payload = {
+          title: form.title,
+          description: form.description,
+          category: form.category,
+          price: Number(form.price),
+          deliveryDays: Number(form.deliveryDays) || 3,
+          ...(serviceImage ? { image: serviceImage } : {}),
+        };
         res = isEdit ? await servicesAPI.update(editId, payload) : await servicesAPI.create(payload);
         navigate(`/detail/service/${res.data._id}`);
       } else if (type === 'need') {
@@ -118,16 +128,45 @@ export default function Create() {
           </div>
 
           {type === 'service' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label">Fiyat (₺) *</label>
-                <input className="form-control" name="price" type="number" min="0" value={form.price} onChange={handleChange} />
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Fiyat (₺) *</label>
+                  <input className="form-control" name="price" type="number" min="0" value={form.price} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Teslim Süresi (gün)</label>
+                  <input className="form-control" name="deliveryDays" type="number" min="1" value={form.deliveryDays} onChange={handleChange} />
+                </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Teslim Süresi (gün)</label>
-                <input className="form-control" name="deliveryDays" type="number" min="1" value={form.deliveryDays} onChange={handleChange} />
+                <label className="form-label">Kapak görseli (isteğe bağlı)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="form-control"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setImageUploadBusy(true);
+                    try {
+                      const { data } = await uploadAPI.serviceCover(f);
+                      setServiceImage(data.url);
+                    } catch {
+                      setError('Görsel yüklenemedi');
+                    } finally {
+                      setImageUploadBusy(false);
+                    }
+                  }}
+                />
+                {imageUploadBusy && <p style={{ fontSize: '.8rem', color: 'var(--muted)', marginTop: '.35rem' }}>Yükleniyor…</p>}
+                {serviceImage && (
+                  <div style={{ marginTop: '.75rem' }}>
+                    <img src={serviceImage} alt="" style={{ maxWidth: 200, borderRadius: '.5rem', border: '1px solid var(--border)' }} />
+                  </div>
+                )}
               </div>
-            </div>
+            </>
           )}
 
           {type === 'need' && (

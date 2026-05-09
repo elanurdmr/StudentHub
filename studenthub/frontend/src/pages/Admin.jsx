@@ -5,12 +5,19 @@ export default function Admin() {
   const [tab, setTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [services, setServices] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [needs, setNeeds] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([adminAPI.users(), adminAPI.services()])
-      .then(([u, s]) => { setUsers(u.data); setServices(s.data); })
+    Promise.all([adminAPI.users(), adminAPI.services(), adminAPI.projects(), adminAPI.needs()])
+      .then(([u, s, p, n]) => {
+        setUsers(u.data);
+        setServices(s.data);
+        setProjects(p.data);
+        setNeeds(n.data);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -20,7 +27,9 @@ export default function Admin() {
       const fn = user.isBanned ? adminAPI.unbanUser : adminAPI.banUser;
       const { data } = await fn(user._id);
       setUsers((u) => u.map((x) => x._id === data._id ? data : x));
-    } catch (err) { alert(err.response?.data?.error || 'Hata'); }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Hata');
+    }
   }
 
   async function removeService(id) {
@@ -28,12 +37,36 @@ export default function Admin() {
     try {
       await adminAPI.removeService(id);
       setServices((s) => s.filter((x) => x._id !== id));
-    } catch (err) { alert(err.response?.data?.error || 'Hata'); }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Hata');
+    }
+  }
+
+  async function removeProject(id) {
+    if (!confirm('Bu proje ilanını silmek istediğinize emin misiniz?')) return;
+    try {
+      await adminAPI.removeProject(id);
+      setProjects((list) => list.filter((x) => x._id !== id));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Hata');
+    }
+  }
+
+  async function removeNeed(id) {
+    if (!confirm('Bu ihtiyaç ilanını silmek istediğinize emin misiniz?')) return;
+    try {
+      await adminAPI.removeNeed(id);
+      setNeeds((list) => list.filter((x) => x._id !== id));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Hata');
+    }
   }
 
   const tabs = [
     { key: 'users', label: 'Kullanıcılar', count: users.length },
     { key: 'services', label: 'Hizmetler', count: services.length },
+    { key: 'projects', label: 'Projeler', count: projects.length },
+    { key: 'needs', label: 'İhtiyaçlar', count: needs.length },
   ];
 
   return (
@@ -55,21 +88,21 @@ export default function Admin() {
         </div>
         <div className="card" style={{ textAlign: 'center' }}>
           <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '2rem', color: 'var(--teal)' }}>{services.length}</div>
-          <div style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Aktif Hizmet</div>
+          <div style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Hizmet ilanı</div>
         </div>
         <div className="card" style={{ textAlign: 'center' }}>
           <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '2rem', color: 'var(--amber)' }}>
-            {services.reduce((s, x) => s + (x.purchaseCount || 0), 0)}
+            {projects.length + needs.length}
           </div>
-          <div style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Toplam Satış</div>
+          <div style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Proje + İhtiyaç</div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '.25rem' }}>
         {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{
-            padding: '.75rem 1.5rem', background: 'none', border: 'none', cursor: 'pointer',
+          <button key={t.key} type="button" onClick={() => setTab(t.key)} style={{
+            padding: '.75rem 1.25rem', background: 'none', border: 'none', cursor: 'pointer',
             fontFamily: 'Syne, sans-serif', fontWeight: 600,
             color: tab === t.key ? 'var(--accent)' : 'var(--muted)',
             borderBottom: tab === t.key ? '2px solid var(--accent)' : '2px solid transparent',
@@ -109,11 +142,7 @@ export default function Admin() {
                   </td>
                   <td>
                     {u.role !== 'admin' && (
-                      <button
-                        className={`btn btn-sm ${u.isBanned ? 'btn-secondary' : 'btn-secondary'}`}
-                        style={{ color: u.isBanned ? 'var(--teal)' : 'var(--coral)' }}
-                        onClick={() => toggleBan(u)}
-                      >
+                      <button type="button" className={`btn btn-sm btn-secondary ${u.isBanned ? '' : ''}`} style={{ color: u.isBanned ? 'var(--teal)' : 'var(--coral)' }} onClick={() => toggleBan(u)}>
                         {u.isBanned ? 'Aktif Et' : 'Askıya Al'}
                       </button>
                     )}
@@ -123,7 +152,7 @@ export default function Admin() {
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : tab === 'services' ? (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <table className="table">
             <thead>
@@ -147,8 +176,74 @@ export default function Admin() {
                     <td style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'var(--accent)' }}>₺{s.price}</td>
                     <td style={{ color: 'var(--muted)' }}>{s.purchaseCount}</td>
                     <td>
-                      <button className="btn btn-sm btn-secondary" style={{ color: 'var(--coral)' }} onClick={() => removeService(s._id)}>
+                      <button type="button" className="btn btn-sm btn-secondary" style={{ color: 'var(--coral)' }} onClick={() => removeService(s._id)}>
                         Kaldır
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : tab === 'projects' ? (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Proje</th>
+                <th>Sahibi</th>
+                <th>Kategori</th>
+                <th>Durum</th>
+                <th>İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.map((p) => {
+                const owner = p.owner || {};
+                return (
+                  <tr key={p._id}>
+                    <td style={{ fontWeight: 600 }}>{p.title}</td>
+                    <td style={{ color: 'var(--muted)' }}>{owner.firstName} {owner.lastName}</td>
+                    <td>{p.category}</td>
+                    <td><span className="chip chip-slate">{p.status}</span></td>
+                    <td>
+                      <button type="button" className="btn btn-sm btn-secondary" style={{ color: 'var(--coral)' }} onClick={() => removeProject(p._id)}>
+                        Sil
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>İhtiyaç</th>
+                <th>Oluşturan</th>
+                <th>Kategori</th>
+                <th>Bütçe</th>
+                <th>Durum</th>
+                <th>İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {needs.map((n) => {
+                const owner = n.owner || {};
+                return (
+                  <tr key={n._id}>
+                    <td style={{ fontWeight: 600 }}>{n.title}</td>
+                    <td style={{ color: 'var(--muted)' }}>{owner.firstName} {owner.lastName}</td>
+                    <td>{n.category}</td>
+                    <td style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700 }}>₺{n.budget}</td>
+                    <td><span className="chip chip-slate">{n.status}</span></td>
+                    <td>
+                      <button type="button" className="btn btn-sm btn-secondary" style={{ color: 'var(--coral)' }} onClick={() => removeNeed(n._id)}>
+                        Sil
                       </button>
                     </td>
                   </tr>

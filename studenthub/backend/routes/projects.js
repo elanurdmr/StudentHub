@@ -4,13 +4,15 @@ import Application from '../models/Application.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { verifyToken } from '../middleware/auth.js';
+import { fetchGeminiProjectMatches } from '../services/geminiProjectMatch.js';
 
 const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const { category, q } = req.query;
+    const { category, q, owner } = req.query;
     const filter = {};
+    if (owner) filter.owner = owner;
     if (category) filter.category = category;
     if (q) filter.$or = [
       { title: { $regex: q, $options: 'i' } },
@@ -35,10 +37,29 @@ router.get('/mine', verifyToken, async (req, res) => {
 router.get('/recommendations', verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    const projects = await Project.find({
-      requiredSkills: { $in: user.skills },
-      status: 'recruiting',
-    }).populate('owner', 'firstName lastName avatar').limit(6);
+    if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+
+    if (process.env.GEMINI_API_KEY?.trim()) {
+      try {
+        const ai = await fetchGeminiProjectMatches(req.user.id);
+        if (Array.isArray(ai)) {
+          return res.json(
+            ai.map((row) => ({
+              ...row.project,
+              aiReason: row.reason,
+              aiMatchScore: row.matchScore,
+            })),
+          );
+        }
+      } catch {
+        /* Gemini hata verirse basit eşleşmeye düş */
+      }
+    }
+
+    const matchFilter = user.skills?.length
+      ? { requiredSkills: { $in: user.skills }, status: 'recruiting' }
+      : { status: 'recruiting' };
+    const projects = await Project.find(matchFilter).populate('owner', 'firstName lastName avatar').limit(6);
     res.json(projects);
   } catch (err) {
     res.status(500).json({ error: err.message });

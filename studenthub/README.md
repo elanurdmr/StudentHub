@@ -31,6 +31,14 @@ Tarayıcıda aç: **http://localhost:5173**
 
 ## 2. Frontend + Backend (Tam Kurulum)
 
+**Önemli:** `studenthub/backend` klasöründe `.env` dosyası oluşturmanız gerekir.
+
+1. `cd studenthub/backend`
+2. Örnekten kopyalayın (PowerShell): `Copy-Item .env.example .env`
+3. `.env` içinde özellikle `MONGO_URI`, `JWT_SECRET` ve yapay zekâ önerileri için `GEMINI_API_KEY` alanlarını doldurun.
+
+**Gemini / AI özellikleri:** Proje eşlemesi için `GEMINI_API_KEY` kullanılır ([Google AI Studio](https://aistudio.google.com/apikey)). Anahtar yoksa öneriler basit beceri filtrelemesine düşer.
+
 ### Adım 1 — Node.js kur
 https://nodejs.org → LTS sürümünü indir ve kur.
 

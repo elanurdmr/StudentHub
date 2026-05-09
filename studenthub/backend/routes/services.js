@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Service from '../models/Service.js';
+import ServiceOrder from '../models/ServiceOrder.js';
 import Notification from '../models/Notification.js';
 import { verifyToken } from '../middleware/auth.js';
 
@@ -7,8 +8,9 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const { category, q, sort } = req.query;
+    const { category, q, sort, owner } = req.query;
     const filter = { isActive: true };
+    if (owner) filter.owner = owner;
     if (category) filter.category = category;
     if (q) filter.$or = [
       { title: { $regex: q, $options: 'i' } },
@@ -82,6 +84,16 @@ router.post('/:id/purchase', verifyToken, async (req, res) => {
   try {
     const service = await Service.findById(req.params.id).populate('owner');
     if (!service) return res.status(404).json({ error: 'Bulunamadı' });
+    const sellerId = service.owner._id.toString();
+    if (sellerId === req.user.id)
+      return res.status(400).json({ error: 'Kendi hizmetinizi satın alamazsınız' });
+    await ServiceOrder.create({
+      buyer: req.user.id,
+      seller: sellerId,
+      service: service._id,
+      amount: service.price,
+      status: 'completed',
+    });
     service.purchaseCount += 1;
     await service.save();
     await Notification.create({
@@ -91,7 +103,7 @@ router.post('/:id/purchase', verifyToken, async (req, res) => {
       body: `"${service.title}" hizmetiniz yeni bir müşteri tarafından satın alındı.`,
       link: `/detail/service/${service._id}`,
     });
-    res.json({ message: 'Satın alma başarılı', serviceId: service._id });
+    res.status(201).json({ message: 'Satın alma başarılı', serviceId: service._id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

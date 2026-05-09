@@ -42,4 +42,13 @@ router.post('/portfolio', verifyToken, upload.single('file'), (req, res) => {
   }
 });
 
+router.post('/service-cover', verifyToken, upload.single('file'), (req, res) => {
+  try {
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

@@ -27,6 +27,19 @@ export default function ProjectCard({ project }) {
             ))}
           </div>
         )}
+        {project.aiReason && (
+          <div style={{
+            padding: '.5rem .65rem',
+            borderRadius: '.5rem',
+            background: 'linear-gradient(135deg, rgba(79,70,229,.08), rgba(236,254,236,.65))',
+            border: '1px solid rgba(79,70,229,.18)',
+          }}>
+            <div style={{ fontSize: '.7rem', color: 'var(--accent)', fontWeight: 700, marginBottom: '.2rem', textTransform: 'uppercase', letterSpacing: '.03em' }}>
+              AI Önerisi{project.aiMatchScore != null ? ` · ${project.aiMatchScore}%` : ''}
+            </div>
+            <p style={{ fontSize: '.8rem', color: 'var(--ink)', margin: 0, lineHeight: 1.4 }}>{project.aiReason}</p>
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginTop: 'auto' }}>
           <div className="avatar av-violet" style={{ width: '1.75rem', height: '1.75rem', fontSize: '.7rem' }}>
             {owner.avatar ? <img src={owner.avatar} alt="" /> : initials}

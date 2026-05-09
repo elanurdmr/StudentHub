@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
-import { projectsAPI } from '../api/client.js';
+import { projectsAPI, aiAPI } from '../api/client.js';
 import ProjectCard from '../components/cards/ProjectCard.jsx';
 import FilterSidebar from '../components/forms/FilterSidebar.jsx';
+import useAuthStore from '../store/authStore.js';
 
 const CATEGORIES = ['Yazılım', 'Tasarım', 'Araştırma', 'Sosyal Girişim', 'Oyun', 'Mobil', 'Yapay Zeka', 'Diğer'];
 
 export default function Projects() {
+  const { token } = useAuthStore();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
   const [q, setQ] = useState('');
+  const [recs, setRecs] = useState([]);
+  const [aiExtra, setAiExtra] = useState([]);
+  const [aiBusy, setAiBusy] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -18,6 +23,35 @@ export default function Projects() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [category, q]);
+
+  useEffect(() => {
+    if (!token) {
+      setRecs([]);
+      return;
+    }
+    projectsAPI.recommendations().then((r) => setRecs(r.data)).catch(() => setRecs([]));
+  }, [token]);
+
+  async function loadAiMatches() {
+    if (!token) return;
+    setAiBusy(true);
+    setAiExtra([]);
+    try {
+      const { data } = await aiAPI.matchProjects();
+      const flat = Array.isArray(data)
+        ? data.map((row) => ({
+            ...row.project,
+            aiReason: row.reason,
+            aiMatchScore: row.matchScore,
+          }))
+        : [];
+      setAiExtra(flat);
+    } catch {
+      setAiExtra([]);
+    } finally {
+      setAiBusy(false);
+    }
+  }
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
@@ -38,6 +72,32 @@ export default function Projects() {
         <FilterSidebar categories={CATEGORIES} selected={category} onSelect={setCategory} onSearch={setQ} searchPlaceholder="Proje ara..." />
 
         <main>
+          {token && (
+            <section style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '.75rem', marginBottom: '1rem' }}>
+                <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>
+                  🤖 Sana uygun projeler
+                  {aiExtra.length > 0 ? ' (Gemini)' : ''}
+                  {recs.length > 0 && aiExtra.length === 0 ? ' (skill eşlemesi veya AI)' : ''}
+                </h2>
+                <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy} onClick={loadAiMatches}>
+                  {aiBusy ? 'Çalışıyor…' : 'Gemini ile eşleştir'}
+                </button>
+              </div>
+              {(aiExtra.length > 0 ? aiExtra : recs).length === 0 ? (
+                <p style={{ fontSize: '.875rem', color: 'var(--muted)' }}>
+                  Henüz öneri yok. Becerilerinizi profilden ekleyin veya yukarıdan Gemini ile deneyin (API anahtarı gerekir).
+                </p>
+              ) : (
+                <div className="grid-3">
+                  {(aiExtra.length > 0 ? aiExtra : recs).slice(0, 6).map((p) => (
+                    <ProjectCard key={`rec-${p._id}-${p.aiMatchScore ?? ''}`} project={p} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
           {loading ? (
             <div className="empty-state"><p>Yükleniyor…</p></div>
           ) : projects.length === 0 ? (

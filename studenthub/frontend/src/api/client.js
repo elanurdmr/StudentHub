@@ -223,6 +223,14 @@ export const notificationsAPI = {
 export const dashboardAPI = {
   summary: () => tryOrMock(() => api.get('/dashboard/summary'), { services: 2, projects: 1, applications: 3, unreadNotifs: 2 }),
   progress: () => tryOrMock(() => api.get('/dashboard/projects/progress'), MOCK_PROJECTS.filter((p) => p.owner._id === 'user-1')),
+  stats: () =>
+    tryOrMock(() => api.get('/dashboard/stats'), {
+      earnings: { total: 0, orderCount: 0, totalSalesListed: 0 },
+      spending: { total: 0, orderCount: 0 },
+      recentPurchases: [],
+      completedProjectsOwned: 0,
+      acceptedApplications: [],
+    }),
 };
 
 /* ── Upload ── */
@@ -245,6 +253,15 @@ export const uploadAPI = {
       return { data: { url: URL.createObjectURL(file) } };
     }
   },
+  serviceCover: async (file) => {
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      return await api.post('/upload/service-cover', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    } catch {
+      return { data: { url: URL.createObjectURL(file) } };
+    }
+  },
 };
 
 /* ── Admin ── */
@@ -263,4 +280,19 @@ export const adminAPI = {
     try { return await api.delete(`/admin/services/${id}`); }
     catch { return { data: { message: 'Silindi' } }; }
   },
+  projects: () => tryOrMock(() => api.get('/admin/projects'), MOCK_PROJECTS),
+  removeProject: async (id) => {
+    try { return await api.delete(`/admin/projects/${id}`); }
+    catch { return { data: { message: 'Silindi' } }; }
+  },
+  needs: () => tryOrMock(() => api.get('/admin/needs'), MOCK_NEEDS),
+  removeNeed: async (id) => {
+    try { return await api.delete(`/admin/needs/${id}`); }
+    catch { return { data: { message: 'Silindi' } }; }
+  },
+};
+
+/* ── AI (Gemini) ── */
+export const aiAPI = {
+  matchProjects: () => api.get('/ai/match-projects'),
 };

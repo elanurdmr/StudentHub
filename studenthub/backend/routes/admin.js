@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import User from '../models/User.js';
 import Service from '../models/Service.js';
+import Project from '../models/Project.js';
+import Need from '../models/Need.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
@@ -45,6 +47,42 @@ router.get('/services', async (req, res) => {
 router.delete('/services/:id', async (req, res) => {
   try {
     await Service.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Silindi' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/projects', async (req, res) => {
+  try {
+    const projects = await Project.find().populate('owner', 'firstName lastName email').sort({ createdAt: -1 });
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/projects/:id', async (req, res) => {
+  try {
+    await Project.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Silindi' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/needs', async (req, res) => {
+  try {
+    const needs = await Need.find().populate('owner', 'firstName lastName email').sort({ createdAt: -1 });
+    res.json(needs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/needs/:id', async (req, res) => {
+  try {
+    await Need.findByIdAndDelete(req.params.id);
     res.json({ message: 'Silindi' });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { usersAPI, reviewsAPI, uploadAPI } from '../api/client.js';
+import { usersAPI, reviewsAPI, uploadAPI, servicesAPI, projectsAPI, needsAPI } from '../api/client.js';
 import useAuthStore from '../store/authStore.js';
 
 export default function Profile() {
@@ -10,6 +10,9 @@ export default function Profile() {
 
   const [profile, setProfile]   = useState(null);
   const [reviews, setReviews]   = useState([]);
+  const [userServices, setUserServices] = useState([]);
+  const [userProjects, setUserProjects] = useState([]);
+  const [userNeeds, setUserNeeds] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [newSkill, setNewSkill] = useState('');
   const [editBio, setEditBio]   = useState(false);
@@ -27,11 +30,20 @@ export default function Profile() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([usersAPI.get(id), reviewsAPI.list(id)])
-      .then(([p, r]) => {
+    Promise.all([
+      usersAPI.get(id),
+      reviewsAPI.list(id),
+      servicesAPI.list({ owner: id }),
+      projectsAPI.list({ owner: id }),
+      needsAPI.list({ owner: id }),
+    ])
+      .then(([p, r, sv, pj, nd]) => {
         setProfile(p.data);
         setBio(p.data.bio || '');
         setReviews(r.data);
+        setUserServices(sv.data || []);
+        setUserProjects(pj.data || []);
+        setUserNeeds(nd.data || []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -217,6 +229,57 @@ export default function Profile() {
 
         {/* ──────── SAĞ MAIN ──────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+          {/* Kullanıcının ilanları */}
+          <div className="card">
+            <h3 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '1rem' }}>Hizmet ilanları</h3>
+            {userServices.length === 0 ? (
+              <p style={{ fontSize: '.875rem', color: 'var(--muted)' }}>Listeleyen kullanıcı hizmeti yok.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+                {userServices.map((s) => (
+                  <Link key={s._id} to={`/detail/service/${s._id}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '.75rem', borderRadius: '.5rem', border: '1px solid var(--border)', textDecoration: 'none', color: 'inherit' }}>
+                    <span style={{ fontWeight: 600 }}>{s.title}</span>
+                    <span style={{ color: 'var(--accent)', fontFamily: 'Syne, sans-serif', fontWeight: 700 }}>₺{s.price}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <h3 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '1rem' }}>Proje ilanları</h3>
+            {userProjects.length === 0 ? (
+              <p style={{ fontSize: '.875rem', color: 'var(--muted)' }}>Listeleyen kullanıcı proje ilanı yok.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+                {userProjects.map((p) => (
+                  <Link key={p._id} to={`/detail/project/${p._id}`} style={{ padding: '.75rem', borderRadius: '.5rem', border: '1px solid var(--border)', textDecoration: 'none', color: 'inherit' }}>
+                    <span style={{ fontWeight: 600 }}>{p.title}</span>
+                    <span className={`chip ${p.status === 'recruiting' ? 'chip-lime' : 'chip-slate'}`} style={{ fontSize: '.65rem', marginLeft: '.5rem' }}>
+                      {p.status}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <h3 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '1rem' }}>İhtiyaç ilanları</h3>
+            {userNeeds.length === 0 ? (
+              <p style={{ fontSize: '.875rem', color: 'var(--muted)' }}>Listeleyen kullanıcı ihtiyaç ilanı yok.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+                {userNeeds.map((n) => (
+                  <Link key={n._id} to={`/detail/need/${n._id}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '.75rem', borderRadius: '.5rem', border: '1px solid var(--border)', textDecoration: 'none', color: 'inherit' }}>
+                    <span style={{ fontWeight: 600 }}>{n.title}</span>
+                    <span style={{ color: 'var(--muted)', fontSize: '.85rem' }}>₺{n.budget}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Portfolyo */}
           <div className="card">

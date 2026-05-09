@@ -1,28 +1,57 @@
 import { Router } from 'express';
+import mongoose from 'mongoose';
 import Message from '../models/Message.js';
+import User from '../models/User.js';
 import { verifyToken } from '../middleware/auth.js';
+import { getOtherParticipantId, userBelongsToConversation } from '../utils/conversation.js';
 
 const router = Router();
 
-function makeConvId(a, b) {
-  return [a, b].sort().join('-');
-}
-
 router.get('/conversations', verifyToken, async (req, res) => {
   try {
+    const uid = req.user.id.toString();
     const msgs = await Message.find({
-      conversationId: { $regex: req.user.id },
+      conversationId: new RegExp(`(^|-)${uid}(-|$)`),
     }).sort({ createdAt: -1 });
 
-    const seen = new Set();
-    const convos = [];
+    const latestByConv = new Map();
     for (const m of msgs) {
-      if (!seen.has(m.conversationId)) {
-        seen.add(m.conversationId);
-        convos.push(m);
-      }
+      if (!latestByConv.has(m.conversationId)) latestByConv.set(m.conversationId, m);
     }
-    res.json(convos);
+
+    const out = [];
+    for (const [conversationId, lastMsgDoc] of latestByConv.entries()) {
+      const otherId = getOtherParticipantId(conversationId, uid);
+      if (!otherId || !mongoose.Types.ObjectId.isValid(otherId)) continue;
+      const [otherUser, unread] = await Promise.all([
+        User.findById(otherId).select('firstName lastName avatar'),
+        Message.countDocuments({
+          conversationId,
+          sender: { $ne: uid },
+          readBy: { $ne: uid },
+        }),
+      ]);
+
+      const lastSender = await User.findById(lastMsgDoc.sender).select('firstName lastName avatar').catch(() => null);
+
+      out.push({
+        conversationId,
+        otherUser: otherUser
+          ? { _id: otherUser._id, firstName: otherUser.firstName, lastName: otherUser.lastName, avatar: otherUser.avatar }
+          : undefined,
+        lastMessage: {
+          text: lastMsgDoc.text,
+          createdAt: lastMsgDoc.createdAt,
+          sender: lastSender
+            ? { _id: lastSender._id, firstName: lastSender.firstName, lastName: lastSender.lastName, avatar: lastSender.avatar }
+            : lastMsgDoc.sender,
+        },
+        unread,
+      });
+    }
+
+    out.sort((a, b) => new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt));
+    res.json(out);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -30,6 +59,8 @@ router.get('/conversations', verifyToken, async (req, res) => {
 
 router.get('/:convId', verifyToken, async (req, res) => {
   try {
+    if (!userBelongsToConversation(req.params.convId, req.user.id))
+      return res.status(403).json({ error: 'Bu konuşmaya erişiminiz yok' });
     const messages = await Message.find({ conversationId: req.params.convId })
       .populate('sender', 'firstName lastName avatar')
       .sort({ createdAt: 1 });
@@ -41,6 +72,8 @@ router.get('/:convId', verifyToken, async (req, res) => {
 
 router.post('/:convId', verifyToken, async (req, res) => {
   try {
+    if (!userBelongsToConversation(req.params.convId, req.user.id))
+      return res.status(403).json({ error: 'Bu konuşmaya mesaj gönderemezsiniz' });
     const msg = await Message.create({
       conversationId: req.params.convId,
       sender: req.user.id,
@@ -56,6 +89,8 @@ router.post('/:convId', verifyToken, async (req, res) => {
 
 router.patch('/:convId/read', verifyToken, async (req, res) => {
   try {
+    if (!userBelongsToConversation(req.params.convId, req.user.id))
+      return res.status(403).json({ error: 'Yetkisiz' });
     await Message.updateMany(
       { conversationId: req.params.convId, readBy: { $ne: req.user.id } },
       { $addToSet: { readBy: req.user.id } }

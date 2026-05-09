@@ -8,8 +8,10 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const { category, q } = req.query;
-    const filter = { status: 'open' };
+    const { category, q, owner } = req.query;
+    const filter = {};
+    if (owner) filter.owner = owner;
+    else filter.status = 'open';
     if (category) filter.category = category;
     if (q) filter.$or = [
       { title: { $regex: q, $options: 'i' } },

@@ -19,6 +19,9 @@ const userSchema = new mongoose.Schema({
   }],
   rating: { type: Number, default: 0 },
   reviewCount: { type: Number, default: 0 },
+  /** Socket.io bağlantı durumu — sunucuda güncellenir */
+  isOnline: { type: Boolean, default: false },
+  lastSeen: { type: Date },
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {
