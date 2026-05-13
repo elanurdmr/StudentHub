@@ -8,6 +8,8 @@ import jwt from 'jsonwebtoken';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import xssClean from 'xss-clean';
 
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
@@ -21,6 +23,7 @@ import dashboardRoutes from './routes/dashboard.js';
 import uploadRoutes from './routes/upload.js';
 import adminRoutes from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
+import favoritesRoutes from './routes/favorites.js';
 import Message from './models/Message.js';
 import Notification from './models/Notification.js';
 import User from './models/User.js';
@@ -36,6 +39,8 @@ const io = new Server(httpServer, {
 });
 
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(xssClean());
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -63,6 +68,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/favorites', favoritesRoutes);
 
 /* ── Socket.io ── */
 const userSockets = new Map();

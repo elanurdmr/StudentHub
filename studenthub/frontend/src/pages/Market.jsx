@@ -11,14 +11,22 @@ export default function Market() {
   const [category, setCategory] = useState('');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
 
   useEffect(() => {
     setLoading(true);
-    servicesAPI.list({ category: category || undefined, q: q || undefined, sort: sort || undefined })
+    servicesAPI.list({
+      category: category || undefined,
+      q: q || undefined,
+      sort: sort || undefined,
+      minPrice: minPrice || undefined,
+      maxPrice: maxPrice || undefined,
+    })
       .then((r) => setServices(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [category, q, sort]);
+  }, [category, q, sort, minPrice, maxPrice]);
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
@@ -35,7 +43,25 @@ export default function Market() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        <input
+          className="form-control"
+          type="number"
+          min="0"
+          placeholder="Min ₺"
+          value={minPrice}
+          onChange={(e) => setMinPrice(e.target.value)}
+          style={{ width: '90px' }}
+        />
+        <input
+          className="form-control"
+          type="number"
+          min="0"
+          placeholder="Max ₺"
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(e.target.value)}
+          style={{ width: '90px' }}
+        />
         <select className="form-control" style={{ width: 'auto' }} value={sort} onChange={(e) => setSort(e.target.value)}>
           <option value="">Sırala: Yeni</option>
           <option value="price_asc">Fiyat: Artan</option>
