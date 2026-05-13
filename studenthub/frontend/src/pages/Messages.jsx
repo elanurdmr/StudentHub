@@ -95,11 +95,13 @@ export default function Messages() {
 
   const isTyping = Object.entries(typingUsers).some(([uid, t]) => t && uid !== user?._id);
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
   return (
-    <div style={{ height: 'calc(100vh - 64px)', display: 'grid', gridTemplateColumns: '300px 1fr' }}>
+    <div style={{ height: 'calc(100vh - 64px)', display: 'grid', gridTemplateColumns: isMobile ? (activeConv ? '0 1fr' : '1fr 0') : 'minmax(0, 300px) 1fr' }}>
 
       {/* Konuşma listesi */}
-      <div style={{ borderRight: '1px solid var(--border)', overflow: 'auto', padding: '1rem 0' }}>
+      <div style={{ borderRight: '1px solid var(--border)', overflow: 'auto', padding: '1rem 0', display: isMobile && activeConv ? 'none' : undefined }}>
         <div style={{ padding: '0 1rem 1rem', borderBottom: '1px solid var(--border)' }}>
           <h3 style={{ fontFamily: 'Syne, sans-serif' }}>Mesajlar</h3>
         </div>
@@ -168,6 +170,12 @@ export default function Messages() {
       {activeConv ? (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', fontFamily: 'Syne, sans-serif', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+            {isMobile && (
+              <button
+                onClick={() => setActiveConv(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', padding: '0 .25rem', color: 'var(--ink)' }}
+              >←</button>
+            )}
             <span>{activeName}</span>
           </div>
           <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '.75rem' }}>

@@ -5,6 +5,7 @@ import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { verifyToken } from '../middleware/auth.js';
 import { fetchGeminiProjectMatches } from '../services/geminiProjectMatch.js';
+import { getSkillBasedRecommendations } from '../services/skillMatchingService.js';
 
 const router = Router();
 
@@ -56,11 +57,12 @@ router.get('/recommendations', verifyToken, async (req, res) => {
       }
     }
 
-    const matchFilter = user.skills?.length
-      ? { requiredSkills: { $in: user.skills }, status: 'recruiting' }
-      : { status: 'recruiting' };
-    const projects = await Project.find(matchFilter).populate('owner', 'firstName lastName avatar').limit(6);
-    res.json(projects);
+    const recommendations = await getSkillBasedRecommendations(req.user.id);
+    if (recommendations.length > 0) {
+      return res.json(recommendations.map((r) => ({ ...r.project.toObject(), matchScore: r.matchScore })));
+    }
+    const projects = await Project.find({ status: 'recruiting' }).populate('owner', 'firstName lastName avatar').limit(6);
+    res.json(projects.map((p) => ({ ...p.toObject(), matchScore: 0 })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

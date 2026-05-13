@@ -1,5 +1,12 @@
 import { Router } from 'express';
 import User from '../models/User.js';
+import Service from '../models/Service.js';
+import Project from '../models/Project.js';
+import Need from '../models/Need.js';
+import Application from '../models/Application.js';
+import Offer from '../models/Offer.js';
+import Review from '../models/Review.js';
+import Message from '../models/Message.js';
 import { verifyToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -80,6 +87,45 @@ router.delete('/:id/portfolio/:itemId', verifyToken, async (req, res) => {
       { new: true }
     ).select('-password');
     res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ── KVKK: Hesap silme (unutulma hakkı) ── */
+router.delete('/:id/account', verifyToken, async (req, res) => {
+  try {
+    if (req.user.id !== req.params.id) return res.status(403).json({ error: 'Sadece kendi hesabınızı silebilirsiniz' });
+    const uid = req.params.id;
+    await Promise.all([
+      Service.deleteMany({ owner: uid }),
+      Project.deleteMany({ owner: uid }),
+      Need.deleteMany({ owner: uid }),
+      Application.deleteMany({ applicant: uid }),
+      Offer.deleteMany({ offerer: uid }),
+      Review.deleteMany({ reviewer: uid }),
+      Message.deleteMany({ sender: uid }),
+    ]);
+    await User.findByIdAndDelete(uid);
+    res.json({ message: 'Hesabınız ve tüm verileriniz silindi' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ── KVKK: Kişisel veri dışa aktarma ── */
+router.get('/:id/export', verifyToken, async (req, res) => {
+  try {
+    if (req.user.id !== req.params.id) return res.status(403).json({ error: 'Sadece kendi verinizi dışa aktarabilirsiniz' });
+    const uid = req.params.id;
+    const [user, services, projects, needs, reviews] = await Promise.all([
+      User.findById(uid).select('-password'),
+      Service.find({ owner: uid }),
+      Project.find({ owner: uid }),
+      Need.find({ owner: uid }),
+      Review.find({ reviewer: uid }),
+    ]);
+    res.json({ profile: user, services, projects, needs, reviews });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

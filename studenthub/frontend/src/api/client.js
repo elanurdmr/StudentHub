@@ -296,3 +296,9 @@ export const adminAPI = {
 export const aiAPI = {
   matchProjects: () => api.get('/ai/match-projects'),
 };
+
+/* ── Favorites ── */
+export const favoritesAPI = {
+  toggle: (contentType, contentId) => api.post('/favorites/toggle', { contentType, contentId }),
+  list: () => api.get('/favorites'),
+};

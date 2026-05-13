@@ -8,7 +8,7 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const { category, q, sort, owner } = req.query;
+    const { category, q, sort, owner, minPrice, maxPrice } = req.query;
     const filter = { isActive: true };
     if (owner) filter.owner = owner;
     if (category) filter.category = category;
@@ -16,6 +16,8 @@ router.get('/', async (req, res) => {
       { title: { $regex: q, $options: 'i' } },
       { description: { $regex: q, $options: 'i' } },
     ];
+    if (minPrice) filter.price = { $gte: Number(minPrice) };
+    if (maxPrice) filter.price = { ...filter.price, $lte: Number(maxPrice) };
     let query = Service.find(filter).populate('owner', 'firstName lastName avatar rating');
     if (sort === 'price_asc') query = query.sort({ price: 1 });
     else if (sort === 'price_desc') query = query.sort({ price: -1 });
