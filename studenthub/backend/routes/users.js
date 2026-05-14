@@ -39,9 +39,12 @@ router.patch('/:id', verifyToken, async (req, res) => {
 router.post('/:id/skills', verifyToken, async (req, res) => {
   try {
     if (req.user.id !== req.params.id) return res.status(403).json({ error: 'Yetkisiz' });
+    const { skill, level } = req.body;
+    if (!skill) return res.status(400).json({ error: 'skill zorunludur' });
+    const skillEntry = { name: skill, level: level || 'intermediate' };
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { $addToSet: { skills: req.body.skill } },
+      { $addToSet: { skills: skillEntry } },
       { new: true }
     ).select('-password');
     res.json(user);
@@ -55,7 +58,7 @@ router.delete('/:id/skills/:skill', verifyToken, async (req, res) => {
     if (req.user.id !== req.params.id) return res.status(403).json({ error: 'Yetkisiz' });
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { $pull: { skills: req.params.skill } },
+      { $pull: { skills: { name: req.params.skill } } },
       { new: true }
     ).select('-password');
     res.json(user);

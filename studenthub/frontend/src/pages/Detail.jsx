@@ -15,6 +15,13 @@ export default function Detail() {
   const [offerForm, setOfferForm] = useState({ price: '', description: '', deliveryDays: '' });
   const [applyForm, setApplyForm] = useState({ coverLetter: '' });
   const [error, setError] = useState('');
+  const [isNarrow, setIsNarrow] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsNarrow(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -95,8 +102,6 @@ export default function Detail() {
   if (!data) return null;
 
   const initials = owner.firstName ? `${owner.firstName[0]}${owner.lastName?.[0] || ''}`.toUpperCase() : '?';
-
-  const isNarrow = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>

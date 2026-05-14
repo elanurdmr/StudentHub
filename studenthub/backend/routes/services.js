@@ -1,12 +1,23 @@
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import Service from '../models/Service.js';
 import ServiceOrder from '../models/ServiceOrder.js';
 import Notification from '../models/Notification.js';
+import UserStatistics from '../models/UserStatistics.js';
+import SearchHistory from '../models/SearchHistory.js';
 import { verifyToken } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+function optionalAuth(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (token) {
+    try { req.user = jwt.verify(token, process.env.JWT_SECRET); } catch { /* yok say */ }
+  }
+  next();
+}
+
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { category, q, sort, owner, minPrice, maxPrice } = req.query;
     const filter = { isActive: true };
@@ -23,7 +34,11 @@ router.get('/', async (req, res) => {
     else if (sort === 'price_desc') query = query.sort({ price: -1 });
     else if (sort === 'rating') query = query.sort({ rating: -1 });
     else query = query.sort({ createdAt: -1 });
-    res.json(await query);
+    const results = await query;
+    if (req.user && q) {
+      SearchHistory.create({ user: req.user.id, query: q, type: 'service', resultCount: results.length }).catch(() => {});
+    }
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -98,6 +113,11 @@ router.post('/:id/purchase', verifyToken, async (req, res) => {
     });
     service.purchaseCount += 1;
     await service.save();
+    UserStatistics.findOneAndUpdate(
+      { user: sellerId },
+      { $inc: { completedJobs: 1, totalEarnings: service.price } },
+      { upsert: true }
+    ).catch(() => {});
     await Notification.create({
       user: service.owner._id,
       type: 'purchase',

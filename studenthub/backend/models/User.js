@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
   bio: { type: String, default: '' },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   isBanned: { type: Boolean, default: false },
-  skills: [{ type: String }],
+  skills: [{ type: mongoose.Schema.Types.Mixed }],
   portfolio: [{
     title: String,
     description: String,
