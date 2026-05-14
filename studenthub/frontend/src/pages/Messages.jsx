@@ -95,7 +95,12 @@ export default function Messages() {
 
   const isTyping = Object.entries(typingUsers).some(([uid, t]) => t && uid !== user?._id);
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   return (
     <div style={{ height: 'calc(100vh - 64px)', display: 'grid', gridTemplateColumns: isMobile ? (activeConv ? '0 1fr' : '1fr 0') : 'minmax(0, 300px) 1fr' }}>

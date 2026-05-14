@@ -71,6 +71,17 @@ npm run dev
 
 Tarayıcıda aç: **http://localhost:5173**
 
+### Adım 5 — AI Servisini başlat (İsteğe bağlı, Skill Matching için)
+Python 3.8+ gereklidir.
+```bash
+cd studenthub/ai-service
+pip install -r requirements.txt
+uvicorn main:app --port 8001 --reload
+```
+Servis http://localhost:8001 adresinde çalışır.
+Çalışmazsa Skill Matching otomatik olarak Node.js implementasyonuna düşer.
+backend/.env dosyasına ekleyin: AI_SERVICE_URL=http://localhost:8001
+
 ---
 
 ## Klasör Yapısı
@@ -78,7 +89,8 @@ Tarayıcıda aç: **http://localhost:5173**
 ```
 studenthub/
 ├── frontend/    → React uygulaması (Vite)
-└── backend/     → Node.js API sunucusu (Express + MongoDB)
+├── backend/     → Node.js API sunucusu (Express + MongoDB)
+└── ai-service/  → Python Skill Matching mikroservisi (FastAPI)
 ```
 
 ---
@@ -125,3 +137,4 @@ studenthub/
 | Backend | Node.js, Express, Socket.io, JWT |
 | Veritabanı | MongoDB |
 | Gerçek Zamanlı | Socket.io (mesajlaşma, bildirimler) |
+| AI Servisi | Python, FastAPI, uvicorn |

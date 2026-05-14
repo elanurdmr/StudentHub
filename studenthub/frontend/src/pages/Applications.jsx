@@ -68,7 +68,10 @@ export default function Applications() {
 
                 {a.skills?.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.35rem', marginBottom: '.75rem' }}>
-                    {a.skills.slice(0, 5).map((s) => <span key={s} className="chip chip-indigo" style={{ fontSize: '.7rem' }}>{s}</span>)}
+                    {a.skills.slice(0, 5).map((s) => {
+                      const sName = typeof s === 'string' ? s : s.name;
+                      return <span key={sName} className="chip chip-indigo" style={{ fontSize: '.7rem' }}>{sName}</span>;
+                    })}
                   </div>
                 )}
 

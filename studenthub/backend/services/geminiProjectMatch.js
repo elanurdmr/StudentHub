@@ -31,7 +31,9 @@ export async function fetchGeminiProjectMatches(userId) {
 
   if (projects.length === 0) return [];
 
-  const skillsStr = (user.skills?.length ? user.skills.join(', ') : '(belirtilmedi)');
+  const skillsStr = user.skills?.length
+    ? user.skills.map(s => typeof s === 'string' ? s : (s.name || '')).filter(Boolean).join(', ')
+    : '(belirtilmedi)';
   const listStr = projects
     .map(
       (p) =>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminAPI } from '../api/client.js';
+import { adminAPI, reportsAPI } from '../api/client.js';
 
 export default function Admin() {
   const [tab, setTab] = useState('users');
@@ -7,16 +7,18 @@ export default function Admin() {
   const [services, setServices] = useState([]);
   const [projects, setProjects] = useState([]);
   const [needs, setNeeds] = useState([]);
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([adminAPI.users(), adminAPI.services(), adminAPI.projects(), adminAPI.needs()])
-      .then(([u, s, p, n]) => {
+    Promise.all([adminAPI.users(), adminAPI.services(), adminAPI.projects(), adminAPI.needs(), reportsAPI.adminList()])
+      .then(([u, s, p, n, r]) => {
         setUsers(u.data);
         setServices(s.data);
         setProjects(p.data);
         setNeeds(n.data);
+        setReports(r.data);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -67,6 +69,7 @@ export default function Admin() {
     { key: 'services', label: 'Hizmetler', count: services.length },
     { key: 'projects', label: 'Projeler', count: projects.length },
     { key: 'needs', label: 'İhtiyaçlar', count: needs.length },
+    { key: 'reports', label: 'Şikayetler', count: reports.length },
   ];
 
   return (
@@ -218,7 +221,7 @@ export default function Admin() {
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : tab === 'needs' ? (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <table className="table">
             <thead>
@@ -246,6 +249,41 @@ export default function Admin() {
                         Sil
                       </button>
                     </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Şikayet Eden</th>
+                <th>İçerik Türü</th>
+                <th>Sebep</th>
+                <th>Durum</th>
+                <th>Tarih</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.length === 0 ? (
+                <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>Henüz şikayet yok</td></tr>
+              ) : reports.map((r) => {
+                const reporter = r.reportedBy;
+                const reporterName = reporter
+                  ? `${reporter.firstName} ${reporter.lastName}`
+                  : 'Mock Kullanıcı';
+                const statusClass = r.status === 'reviewed' ? 'status-active' : r.status === 'dismissed' ? 'status-rejected' : 'status-pending';
+                const statusLabel = r.status === 'reviewed' ? 'İncelendi' : r.status === 'dismissed' ? 'Reddedildi' : 'Bekliyor';
+                return (
+                  <tr key={r._id}>
+                    <td style={{ fontWeight: 600 }}>{reporterName}</td>
+                    <td><span className="chip chip-slate" style={{ fontSize: '.7rem' }}>{r.contentType}</span></td>
+                    <td style={{ color: 'var(--muted)', fontSize: '.85rem' }}>{(r.reason || '').slice(0, 60)}</td>
+                    <td><span className={`status-badge ${statusClass}`}>{statusLabel}</span></td>
+                    <td style={{ color: 'var(--muted)', fontSize: '.85rem' }}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString('tr-TR') : '—'}</td>
                   </tr>
                 );
               })}
