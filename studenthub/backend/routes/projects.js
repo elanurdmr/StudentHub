@@ -1,15 +1,26 @@
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import Project from '../models/Project.js';
 import Application from '../models/Application.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
+import OneriLog from '../models/OneriLog.js';
+import SearchHistory from '../models/SearchHistory.js';
 import { verifyToken } from '../middleware/auth.js';
 import { fetchGeminiProjectMatches } from '../services/geminiProjectMatch.js';
 import { getSkillBasedRecommendations } from '../services/skillMatchingService.js';
 
+function optionalAuth(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (token) {
+    try { req.user = jwt.verify(token, process.env.JWT_SECRET); } catch { /* yok say */ }
+  }
+  next();
+}
+
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { category, q, owner } = req.query;
     const filter = {};
@@ -20,6 +31,9 @@ router.get('/', async (req, res) => {
       { description: { $regex: q, $options: 'i' } },
     ];
     const projects = await Project.find(filter).populate('owner', 'firstName lastName avatar').sort({ createdAt: -1 });
+    if (req.user && q) {
+      SearchHistory.create({ user: req.user.id, query: q, type: 'project', resultCount: projects.length }).catch(() => {});
+    }
     res.json(projects);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -59,9 +73,15 @@ router.get('/recommendations', verifyToken, async (req, res) => {
 
     const recommendations = await getSkillBasedRecommendations(req.user.id);
     if (recommendations.length > 0) {
+      recommendations.forEach((r) => {
+        OneriLog.create({ user: req.user.id, project: r.project._id, action: 'viewed' }).catch(() => {});
+      });
       return res.json(recommendations.map((r) => ({ ...r.project.toObject(), matchScore: r.matchScore })));
     }
     const projects = await Project.find({ status: 'recruiting' }).populate('owner', 'firstName lastName avatar').limit(6);
+    projects.forEach((p) => {
+      OneriLog.create({ user: req.user.id, project: p._id, action: 'viewed' }).catch(() => {});
+    });
     res.json(projects.map((p) => ({ ...p.toObject(), matchScore: 0 })));
   } catch (err) {
     res.status(500).json({ error: err.message });

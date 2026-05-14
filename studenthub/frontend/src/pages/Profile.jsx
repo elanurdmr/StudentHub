@@ -14,6 +14,7 @@ export default function Profile() {
   const [userProjects, setUserProjects] = useState([]);
   const [userNeeds, setUserNeeds] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [newSkill, setNewSkill] = useState('');
   const [editBio, setEditBio]   = useState(false);
   const [bio, setBio]           = useState('');
@@ -27,6 +28,12 @@ export default function Profile() {
 
   const fileRef = useRef();
   const isMe    = me?._id === id;
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -122,7 +129,7 @@ export default function Profile() {
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '2rem', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '280px 1fr', gap: '2rem', alignItems: 'start' }}>
 
         {/* ──────── SOL SIDEBAR ──────── */}
         <div>

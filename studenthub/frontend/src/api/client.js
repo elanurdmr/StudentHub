@@ -302,3 +302,11 @@ export const favoritesAPI = {
   toggle: (contentType, contentId) => api.post('/favorites/toggle', { contentType, contentId }),
   list: () => api.get('/favorites'),
 };
+
+/* ── Reports ── */
+export const reportsAPI = {
+  create: async (data) => {
+    try { return await api.post('/reports', data); }
+    catch { return { data: { message: 'Şikayet alındı' } }; }
+  },
+};

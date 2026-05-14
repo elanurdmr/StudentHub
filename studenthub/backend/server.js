@@ -24,6 +24,7 @@ import uploadRoutes from './routes/upload.js';
 import adminRoutes from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
 import favoritesRoutes from './routes/favorites.js';
+import reportsRoutes from './routes/reports.js';
 import Message from './models/Message.js';
 import Notification from './models/Notification.js';
 import User from './models/User.js';
@@ -69,6 +70,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/favorites', favoritesRoutes);
+app.use('/api/reports', reportsRoutes);
 
 /* ── Socket.io ── */
 const userSockets = new Map();

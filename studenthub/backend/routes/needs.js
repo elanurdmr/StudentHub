@@ -1,12 +1,22 @@
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import Need from '../models/Need.js';
 import Offer from '../models/Offer.js';
 import Notification from '../models/Notification.js';
+import SearchHistory from '../models/SearchHistory.js';
 import { verifyToken } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+function optionalAuth(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (token) {
+    try { req.user = jwt.verify(token, process.env.JWT_SECRET); } catch { /* yok say */ }
+  }
+  next();
+}
+
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { category, q, owner } = req.query;
     const filter = {};
@@ -18,6 +28,9 @@ router.get('/', async (req, res) => {
       { description: { $regex: q, $options: 'i' } },
     ];
     const needs = await Need.find(filter).populate('owner', 'firstName lastName avatar').sort({ createdAt: -1 });
+    if (req.user && q) {
+      SearchHistory.create({ user: req.user.id, query: q, type: 'need', resultCount: needs.length }).catch(() => {});
+    }
     res.json(needs);
   } catch (err) {
     res.status(500).json({ error: err.message });
