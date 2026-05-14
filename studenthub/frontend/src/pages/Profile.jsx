@@ -204,19 +204,28 @@ export default function Profile() {
               {profile.skills?.length === 0 && (
                 <span style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Henüz beceri eklenmemiş</span>
               )}
-              {profile.skills?.map((s) => (
-                <span key={s} className="chip chip-indigo" style={{ gap: '.25rem' }}>
-                  {s}
-                  {isMe && (
-                    <button
-                      onClick={() => removeSkill(s)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 700, padding: 0, lineHeight: 1 }}
-                    >
-                      ×
-                    </button>
-                  )}
-                </span>
-              ))}
+              {profile.skills?.map((s) => {
+                const skillName = typeof s === 'string' ? s : s.name;
+                const skillLevel = typeof s === 'string' ? null : s.level;
+                return (
+                  <span key={skillName} className="chip chip-indigo" style={{ gap: '.25rem' }}>
+                    {skillName}
+                    {skillLevel && (
+                      <span style={{ fontSize: '.65rem', opacity: 0.7, fontWeight: 400 }}>
+                        · {skillLevel === 'expert' ? 'uzman' : skillLevel === 'intermediate' ? 'orta' : 'başlangıç'}
+                      </span>
+                    )}
+                    {isMe && (
+                      <button
+                        onClick={() => removeSkill(skillName)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 700, padding: 0, lineHeight: 1 }}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </span>
+                );
+              })}
             </div>
             {isMe && (
               <div style={{ display: 'flex', gap: '.5rem' }}>

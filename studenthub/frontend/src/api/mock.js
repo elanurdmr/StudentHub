@@ -8,7 +8,12 @@ export const MOCK_USER = {
   avatar: '',
   bio: 'Bilgisayar Mühendisliği 3. sınıf öğrencisi. React ve Node.js geliştirici.',
   role: 'user',
-  skills: ['React', 'Node.js', 'Figma', 'Python'],
+  skills: [
+    { name: 'React', level: 'expert' },
+    { name: 'Node.js', level: 'intermediate' },
+    { name: 'Figma', level: 'beginner' },
+    { name: 'Python', level: 'intermediate' },
+  ],
   rating: 4.8,
   reviewCount: 12,
   portfolio: [],
@@ -16,9 +21,9 @@ export const MOCK_USER = {
 
 export const MOCK_USERS = [
   MOCK_USER,
-  { _id: 'user-2', firstName: 'Mehmet', lastName: 'Demir', avatar: '', rating: 4.5, reviewCount: 8, skills: ['Photoshop', 'Illustrator'], bio: 'Grafik tasarımcı.' },
-  { _id: 'user-3', firstName: 'Zeynep', lastName: 'Arslan', avatar: '', rating: 4.9, reviewCount: 21, skills: ['Python', 'ML', 'TensorFlow'], bio: 'Yapay zeka araştırmacısı.' },
-  { _id: 'user-4', firstName: 'Can', lastName: 'Yıldız', avatar: '', rating: 4.2, reviewCount: 5, skills: ['Unity', 'C#', 'Blender'], bio: 'Oyun geliştirici.' },
+  { _id: 'user-2', firstName: 'Mehmet', lastName: 'Demir', avatar: '', rating: 4.5, reviewCount: 8, skills: [{ name: 'Photoshop', level: 'expert' }, { name: 'Illustrator', level: 'expert' }], bio: 'Grafik tasarımcı.' },
+  { _id: 'user-3', firstName: 'Zeynep', lastName: 'Arslan', avatar: '', rating: 4.9, reviewCount: 21, skills: [{ name: 'Python', level: 'expert' }, { name: 'ML', level: 'intermediate' }, { name: 'TensorFlow', level: 'intermediate' }], bio: 'Yapay zeka araştırmacısı.' },
+  { _id: 'user-4', firstName: 'Can', lastName: 'Yıldız', avatar: '', rating: 4.2, reviewCount: 5, skills: [{ name: 'Unity', level: 'expert' }, { name: 'C#', level: 'intermediate' }, { name: 'Blender', level: 'beginner' }], bio: 'Oyun geliştirici.' },
 ];
 
 export const MOCK_SERVICES = [
@@ -62,6 +67,8 @@ export const MOCK_APPLICATIONS = [
   { _id: 'app-2', applicant: MOCK_USERS[3], coverLetter: 'Full-stack geliştirici olarak React ve Node.js projelerinde aktif rol aldım. Ekibe katılmak istiyorum.', status: 'pending', createdAt: new Date(Date.now() - 7200000).toISOString() },
   { _id: 'app-3', applicant: MOCK_USERS[1], coverLetter: 'UI/UX tasarım ve frontend geliştirme konularında deneyimliyim.', status: 'accepted', createdAt: new Date(Date.now() - 86400000).toISOString() },
 ];
+
+export const MOCK_REPORTS = [];
 
 /* Mock token ve kullanıcı oturumu */
 export function mockLogin() {

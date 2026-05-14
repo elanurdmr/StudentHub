@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { servicesAPI, needsAPI, projectsAPI } from '../api/client.js';
+import { servicesAPI, needsAPI, projectsAPI, reportsAPI } from '../api/client.js';
 import useAuthStore from '../store/authStore.js';
 import Modal from '../components/ui/Modal.jsx';
 
@@ -16,6 +16,7 @@ export default function Detail() {
   const [applyForm, setApplyForm] = useState({ coverLetter: '' });
   const [error, setError] = useState('');
   const [isNarrow, setIsNarrow] = useState(window.innerWidth < 768);
+  const [reported, setReported] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsNarrow(window.innerWidth < 768);
@@ -96,6 +97,15 @@ export default function Detail() {
       const r = await needsAPI.get(id);
       setData(r.data);
     } catch (err) { alert(err.response?.data?.error || 'Hata'); }
+  }
+
+  async function handleReport() {
+    if (reported) return;
+    const reason = prompt('Şikayet sebebini kısaca yazın:');
+    if (!reason?.trim()) return;
+    await reportsAPI.create({ contentType: type, contentId: id, reason });
+    setReported(true);
+    alert('Şikayetiniz alındı. Teşekkür ederiz.');
   }
 
   if (loading) return <div className="empty-state" style={{ marginTop: '4rem' }}><p>Yükleniyor…</p></div>;
@@ -201,6 +211,21 @@ export default function Detail() {
                 ) : (
                   <Link to="/auth" className="btn btn-primary w-full" style={{ justifyContent: 'center' }}>Giriş Yap</Link>
                 )}
+                {user && !isOwner && (
+                  <button
+                    onClick={handleReport}
+                    disabled={reported}
+                    style={{
+                      marginTop: '.75rem', width: '100%',
+                      background: 'none', border: '1px solid var(--border)',
+                      borderRadius: '.5rem', padding: '.45rem', cursor: 'pointer',
+                      color: reported ? 'var(--muted)' : 'var(--coral)',
+                      fontSize: '.8rem',
+                    }}
+                  >
+                    {reported ? '✓ Şikayet gönderildi' : '⚑ Şikayet et'}
+                  </button>
+                )}
               </>
             )}
 
@@ -218,6 +243,21 @@ export default function Detail() {
                   </button>
                 ) : (
                   <Link to="/auth" className="btn btn-primary w-full" style={{ justifyContent: 'center' }}>Giriş Yap</Link>
+                )}
+                {user && !isOwner && (
+                  <button
+                    onClick={handleReport}
+                    disabled={reported}
+                    style={{
+                      marginTop: '.75rem', width: '100%',
+                      background: 'none', border: '1px solid var(--border)',
+                      borderRadius: '.5rem', padding: '.45rem', cursor: 'pointer',
+                      color: reported ? 'var(--muted)' : 'var(--coral)',
+                      fontSize: '.8rem',
+                    }}
+                  >
+                    {reported ? '✓ Şikayet gönderildi' : '⚑ Şikayet et'}
+                  </button>
                 )}
               </>
             )}
@@ -245,6 +285,21 @@ export default function Detail() {
                   </button>
                 ) : (
                   <Link to="/auth" className="btn btn-primary w-full" style={{ justifyContent: 'center' }}>Giriş Yap</Link>
+                )}
+                {user && !isOwner && (
+                  <button
+                    onClick={handleReport}
+                    disabled={reported}
+                    style={{
+                      marginTop: '.75rem', width: '100%',
+                      background: 'none', border: '1px solid var(--border)',
+                      borderRadius: '.5rem', padding: '.45rem', cursor: 'pointer',
+                      color: reported ? 'var(--muted)' : 'var(--coral)',
+                      fontSize: '.8rem',
+                    }}
+                  >
+                    {reported ? '✓ Şikayet gönderildi' : '⚑ Şikayet et'}
+                  </button>
                 )}
               </>
             )}

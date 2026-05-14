@@ -4,7 +4,7 @@ import {
   mockRes, mockLogin,
   MOCK_USER, MOCK_USERS, MOCK_SERVICES, MOCK_NEEDS,
   MOCK_PROJECTS, MOCK_NOTIFICATIONS, MOCK_REVIEWS,
-  MOCK_APPLICATIONS,
+  MOCK_APPLICATIONS, MOCK_REPORTS,
 } from './mock.js';
 
 const api = axios.create({ baseURL: '/api' });
@@ -294,13 +294,24 @@ export const adminAPI = {
 
 /* ── AI (Gemini) ── */
 export const aiAPI = {
-  matchProjects: () => api.get('/ai/match-projects'),
+  matchProjects: () => tryOrMock(
+    () => api.get('/ai/match-projects'),
+    () => MOCK_PROJECTS.slice(0, 3).map(p => ({
+      ...p, aiReason: 'Becerilerinizle yüksek uyum', aiMatchScore: 75
+    }))
+  ),
 };
 
 /* ── Favorites ── */
 export const favoritesAPI = {
-  toggle: (contentType, contentId) => api.post('/favorites/toggle', { contentType, contentId }),
-  list: () => api.get('/favorites'),
+  toggle: async (contentType, contentId) => {
+    try {
+      return await api.post('/favorites/toggle', { contentType, contentId });
+    } catch {
+      return { data: { favorited: true } };
+    }
+  },
+  list: () => tryOrMock(() => api.get('/favorites'), []),
 };
 
 /* ── Reports ── */
@@ -309,4 +320,8 @@ export const reportsAPI = {
     try { return await api.post('/reports', data); }
     catch { return { data: { message: 'Şikayet alındı' } }; }
   },
+  adminList: (params) => tryOrMock(
+    () => api.get('/reports/admin', { params }),
+    MOCK_REPORTS
+  ),
 };
