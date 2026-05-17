@@ -4,7 +4,8 @@ import Service from '../models/Service.js';
 import Project from '../models/Project.js';
 import Need from '../models/Need.js';
 import AdminLog from '../models/AdminLog.js';
-import { verifyToken, requireAdmin } from '../middleware/auth.js';
+import { verifyToken } from '../middleware/auth.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
@@ -21,120 +22,54 @@ router.use(verifyToken, (req, res, next) => {
   next();
 });
 
-router.get('/users', async (req, res) => {
-  try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/users', asyncHandler(async (req, res) => {
+  const users = await User.find().select('-password').sort({ createdAt: -1 });
+  res.json(users);
+}));
 
-router.patch('/users/:id/ban', async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(req.params.id, { isBanned: true }, { new: true }).select('-password');
-    await AdminLog.create({
-      admin: req.user.id,
-      action: 'banUser',
-      targetType: 'User',
-      targetId: req.params.id,
-      details: { email: user?.email },
-    });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.patch('/users/:id/ban', asyncHandler(async (req, res) => {
+  const user = await User.findByIdAndUpdate(req.params.id, { isBanned: true }, { new: true }).select('-password');
+  await AdminLog.create({ admin: req.user.id, action: 'banUser', targetType: 'User', targetId: req.params.id, details: { email: user?.email } });
+  res.json(user);
+}));
 
-router.patch('/users/:id/unban', async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(req.params.id, { isBanned: false }, { new: true }).select('-password');
-    await AdminLog.create({
-      admin: req.user.id,
-      action: 'unbanUser',
-      targetType: 'User',
-      targetId: req.params.id,
-      details: { email: user?.email },
-    });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.patch('/users/:id/unban', asyncHandler(async (req, res) => {
+  const user = await User.findByIdAndUpdate(req.params.id, { isBanned: false }, { new: true }).select('-password');
+  await AdminLog.create({ admin: req.user.id, action: 'unbanUser', targetType: 'User', targetId: req.params.id, details: { email: user?.email } });
+  res.json(user);
+}));
 
-router.get('/services', async (req, res) => {
-  try {
-    const services = await Service.find().populate('owner', 'firstName lastName email').sort({ createdAt: -1 });
-    res.json(services);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/services', asyncHandler(async (req, res) => {
+  const services = await Service.find().populate('owner', 'firstName lastName email').sort({ createdAt: -1 });
+  res.json(services);
+}));
 
-router.delete('/services/:id', async (req, res) => {
-  try {
-    const service = await Service.findByIdAndDelete(req.params.id);
-    await AdminLog.create({
-      admin: req.user.id,
-      action: 'removeService',
-      targetType: 'Service',
-      targetId: req.params.id,
-      details: { title: service?.title },
-    });
-    res.json({ message: 'Silindi' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.delete('/services/:id', asyncHandler(async (req, res) => {
+  const service = await Service.findByIdAndDelete(req.params.id);
+  await AdminLog.create({ admin: req.user.id, action: 'removeService', targetType: 'Service', targetId: req.params.id, details: { title: service?.title } });
+  res.json({ message: 'Silindi' });
+}));
 
-router.get('/projects', async (req, res) => {
-  try {
-    const projects = await Project.find().populate('owner', 'firstName lastName email').sort({ createdAt: -1 });
-    res.json(projects);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/projects', asyncHandler(async (req, res) => {
+  const projects = await Project.find().populate('owner', 'firstName lastName email').sort({ createdAt: -1 });
+  res.json(projects);
+}));
 
-router.delete('/projects/:id', async (req, res) => {
-  try {
-    const project = await Project.findByIdAndDelete(req.params.id);
-    await AdminLog.create({
-      admin: req.user.id,
-      action: 'removeProject',
-      targetType: 'Project',
-      targetId: req.params.id,
-      details: { title: project?.title },
-    });
-    res.json({ message: 'Silindi' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.delete('/projects/:id', asyncHandler(async (req, res) => {
+  const project = await Project.findByIdAndDelete(req.params.id);
+  await AdminLog.create({ admin: req.user.id, action: 'removeProject', targetType: 'Project', targetId: req.params.id, details: { title: project?.title } });
+  res.json({ message: 'Silindi' });
+}));
 
-router.get('/needs', async (req, res) => {
-  try {
-    const needs = await Need.find().populate('owner', 'firstName lastName email').sort({ createdAt: -1 });
-    res.json(needs);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/needs', asyncHandler(async (req, res) => {
+  const needs = await Need.find().populate('owner', 'firstName lastName email').sort({ createdAt: -1 });
+  res.json(needs);
+}));
 
-router.delete('/needs/:id', async (req, res) => {
-  try {
-    const need = await Need.findByIdAndDelete(req.params.id);
-    await AdminLog.create({
-      admin: req.user.id,
-      action: 'removeNeed',
-      targetType: 'Need',
-      targetId: req.params.id,
-      details: { title: need?.title },
-    });
-    res.json({ message: 'Silindi' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.delete('/needs/:id', asyncHandler(async (req, res) => {
+  const need = await Need.findByIdAndDelete(req.params.id);
+  await AdminLog.create({ admin: req.user.id, action: 'removeNeed', targetType: 'Need', targetId: req.params.id, details: { title: need?.title } });
+  res.json({ message: 'Silindi' });
+}));
 
 export default router;

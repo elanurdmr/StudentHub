@@ -7,7 +7,7 @@ import {
   MOCK_APPLICATIONS, MOCK_REPORTS,
 } from './mock.js';
 
-const api = axios.create({ baseURL: '/api' });
+const api = axios.create({ baseURL: '/api', withCredentials: true });
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
@@ -15,14 +15,58 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => (error ? prom.reject(error) : prom.resolve(token)));
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (
+      error.response?.status === 401 &&
+      error.response?.data?.code === 'TOKEN_EXPIRED' &&
+      !originalRequest._retry
+    ) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const { data } = await api.post('/auth/refresh');
+        useAuthStore.getState().setAccessToken(data.accessToken);
+        processQueue(null, data.accessToken);
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        useAuthStore.getState().logout();
+        window.location.href = '/auth';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
       useAuthStore.getState().logout();
       window.location.href = '/auth';
     }
-    return Promise.reject(err);
+
+    return Promise.reject(error);
   }
 );
 
@@ -56,6 +100,7 @@ export const authAPI = {
     }
   },
   me: () => tryOrMock(() => api.get('/auth/me'), MOCK_USER),
+  refresh: () => api.post('/auth/refresh'),
 };
 
 /* ── Users ── */
@@ -67,11 +112,11 @@ export const usersAPI = {
   },
   addSkill: async (id, skill) => {
     try { return await api.post(`/users/${id}/skills`, { skill }); }
-    catch { return { data: { ...MOCK_USER, skills: [...(MOCK_USER.skills || []), skill] } }; }
+    catch { return { data: { ...MOCK_USER, skills: [...(MOCK_USER.skills || []), { name: skill, level: 'intermediate' }] } }; }
   },
   removeSkill: async (id, skill) => {
     try { return await api.delete(`/users/${id}/skills/${skill}`); }
-    catch { return { data: { ...MOCK_USER, skills: MOCK_USER.skills.filter((s) => s !== skill) } }; }
+    catch { return { data: { ...MOCK_USER, skills: MOCK_USER.skills.filter((s) => (typeof s === 'string' ? s : s.name) !== skill) } }; }
   },
   addPortfolio: async (id, data) => {
     try { return await api.post(`/users/${id}/portfolio`, data); }
@@ -79,6 +124,30 @@ export const usersAPI = {
   },
   removePortfolio: async (id, itemId) => {
     try { return await api.delete(`/users/${id}/portfolio/${itemId}`); }
+    catch { return { data: MOCK_USER }; }
+  },
+  addEducation: async (id, data) => {
+    try { return await api.post(`/users/${id}/education`, data); }
+    catch { return { data: MOCK_USER }; }
+  },
+  removeEducation: async (id, educId) => {
+    try { return await api.delete(`/users/${id}/education/${educId}`); }
+    catch { return { data: MOCK_USER }; }
+  },
+  addExperience: async (id, data) => {
+    try { return await api.post(`/users/${id}/experience`, data); }
+    catch { return { data: MOCK_USER }; }
+  },
+  removeExperience: async (id, expId) => {
+    try { return await api.delete(`/users/${id}/experience/${expId}`); }
+    catch { return { data: MOCK_USER }; }
+  },
+  addCertification: async (id, data) => {
+    try { return await api.post(`/users/${id}/certifications`, data); }
+    catch { return { data: MOCK_USER }; }
+  },
+  removeCertification: async (id, certId) => {
+    try { return await api.delete(`/users/${id}/certifications/${certId}`); }
     catch { return { data: MOCK_USER }; }
   },
 };
@@ -92,7 +161,7 @@ export const servicesAPI = {
     if (params?.sort === 'price_asc') list.sort((a, b) => a.price - b.price);
     if (params?.sort === 'price_desc') list.sort((a, b) => b.price - a.price);
     if (params?.sort === 'rating') list.sort((a, b) => b.rating - a.rating);
-    return list;
+    return { data: list, pagination: { page: 1, limit: 20, total: list.length, pages: 1 } };
   }),
   mine: () => tryOrMock(() => api.get('/services/mine'), MOCK_SERVICES.filter((s) => s.owner._id === 'user-1')),
   get: (id) => tryOrMock(() => api.get(`/services/${id}`), MOCK_SERVICES.find((s) => s._id === id) || MOCK_SERVICES[0]),
@@ -111,6 +180,14 @@ export const servicesAPI = {
   purchase: async (id) => {
     try { return await api.post(`/services/${id}/purchase`); }
     catch { return { data: { message: 'Satın alma başarılı' } }; }
+  },
+  checkout: async (id) => {
+    try { return await api.post(`/services/${id}/checkout`); }
+    catch { return { data: { paymentIntentId: 'pi_mock_' + Date.now(), clientSecret: 'mock_secret', amount: 0, serviceName: 'Mock Hizmet' } }; }
+  },
+  confirmPayment: async (id, paymentIntentId) => {
+    try { return await api.post(`/services/${id}/confirm-payment`, { paymentIntentId }); }
+    catch { return { data: { message: 'Ödeme başarılı' } }; }
   },
 };
 
@@ -155,7 +232,7 @@ export const projectsAPI = {
     let list = [...MOCK_PROJECTS];
     if (params?.category) list = list.filter((p) => p.category === params.category);
     if (params?.q) list = list.filter((p) => p.title.toLowerCase().includes(params.q.toLowerCase()));
-    return list;
+    return { data: list, pagination: { page: 1, limit: 20, total: list.length, pages: 1 } };
   }),
   mine: () => tryOrMock(() => api.get('/projects/mine'), MOCK_PROJECTS.filter((p) => p.owner._id === 'user-1')),
   get: (id) => tryOrMock(() => api.get(`/projects/${id}`), MOCK_PROJECTS.find((p) => p._id === id) || MOCK_PROJECTS[0]),
@@ -223,14 +300,13 @@ export const notificationsAPI = {
 export const dashboardAPI = {
   summary: () => tryOrMock(() => api.get('/dashboard/summary'), { services: 2, projects: 1, applications: 3, unreadNotifs: 2 }),
   progress: () => tryOrMock(() => api.get('/dashboard/projects/progress'), MOCK_PROJECTS.filter((p) => p.owner._id === 'user-1')),
-  stats: () =>
-    tryOrMock(() => api.get('/dashboard/stats'), {
-      earnings: { total: 0, orderCount: 0, totalSalesListed: 0 },
-      spending: { total: 0, orderCount: 0 },
-      recentPurchases: [],
-      completedProjectsOwned: 0,
-      acceptedApplications: [],
-    }),
+  stats: () => tryOrMock(() => api.get('/dashboard/stats'), {
+    earnings: { total: 0, orderCount: 0, totalSalesListed: 0 },
+    spending: { total: 0, orderCount: 0 },
+    recentPurchases: [],
+    completedProjectsOwned: 0,
+    acceptedApplications: [],
+  }),
 };
 
 /* ── Upload ── */
@@ -292,24 +368,19 @@ export const adminAPI = {
   },
 };
 
-/* ── AI (Gemini) ── */
+/* ── AI ── */
 export const aiAPI = {
   matchProjects: () => tryOrMock(
     () => api.get('/ai/match-projects'),
-    () => MOCK_PROJECTS.slice(0, 3).map(p => ({
-      ...p, aiReason: 'Becerilerinizle yüksek uyum', aiMatchScore: 75
-    }))
+    () => MOCK_PROJECTS.slice(0, 3).map((p) => ({ ...p, aiReason: 'Becerilerinizle yüksek uyum', aiMatchScore: 75 }))
   ),
 };
 
 /* ── Favorites ── */
 export const favoritesAPI = {
   toggle: async (contentType, contentId) => {
-    try {
-      return await api.post('/favorites/toggle', { contentType, contentId });
-    } catch {
-      return { data: { favorited: true } };
-    }
+    try { return await api.post('/favorites/toggle', { contentType, contentId }); }
+    catch { return { data: { favorited: true } }; }
   },
   list: () => tryOrMock(() => api.get('/favorites'), []),
 };
@@ -320,8 +391,11 @@ export const reportsAPI = {
     try { return await api.post('/reports', data); }
     catch { return { data: { message: 'Şikayet alındı' } }; }
   },
-  adminList: (params) => tryOrMock(
-    () => api.get('/reports/admin', { params }),
-    MOCK_REPORTS
-  ),
+  adminList: (params) => tryOrMock(() => api.get('/reports/admin', { params }), MOCK_REPORTS),
+};
+
+/* ── Skills ── */
+export const skillsAPI = {
+  search: (q, params = {}) => tryOrMock(() => api.get('/skills/search', { params: { q, ...params } }), []),
+  popular: () => tryOrMock(() => api.get('/skills/popular'), []),
 };

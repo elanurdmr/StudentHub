@@ -26,6 +26,10 @@ const useAuthStore = create((set) => ({
     localStorage.setItem('sh_user', JSON.stringify(user));
     set({ user });
   },
+  setAccessToken(token) {
+    localStorage.setItem('sh_token', token);
+    set({ token });
+  },
 }));
 
 export default useAuthStore;

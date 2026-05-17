@@ -50,7 +50,7 @@ export default function Auth() {
     setLoading(true);
     try {
       const { data } = await authAPI.login({ email: form.email, password: form.password });
-      login(data.token, data.user);
+      login(data.accessToken, data.user);
       navigate('/dashboard');
     } catch (err) {
       setApiError(err.response?.data?.error || 'Giriş başarısız');
@@ -66,7 +66,7 @@ export default function Auth() {
     setLoading(true);
     try {
       const { data } = await authAPI.register(form);
-      login(data.token, data.user);
+      login(data.accessToken, data.user);
       navigate('/dashboard');
     } catch (err) {
       setApiError(err.response?.data?.error || 'Kayıt başarısız');
