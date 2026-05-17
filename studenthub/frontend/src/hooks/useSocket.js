@@ -8,7 +8,7 @@ export function getSocket() {
   return socketInstance;
 }
 
-export function useSocket({ onMessage, onNotification, onTyping, onPresence } = {}) {
+export function useSocket({ onMessage, onNotification, onTyping, onPresence, onOpportunityMatch } = {}) {
   const token = useAuthStore((s) => s.token);
   const socketRef = useRef(null);
 
@@ -27,12 +27,14 @@ export function useSocket({ onMessage, onNotification, onTyping, onPresence } = 
     if (onNotification) socketInstance.on('notification', onNotification);
     if (onTyping) socketInstance.on('typing', onTyping);
     if (onPresence) socketInstance.on('presence', onPresence);
+    if (onOpportunityMatch) socketInstance.on('opportunity_match', onOpportunityMatch);
 
     return () => {
       if (onMessage) socketInstance.off('new_message', onMessage);
       if (onNotification) socketInstance.off('notification', onNotification);
       if (onTyping) socketInstance.off('typing', onTyping);
       if (onPresence) socketInstance.off('presence', onPresence);
+      if (onOpportunityMatch) socketInstance.off('opportunity_match', onOpportunityMatch);
     };
   }, [token]);
 

@@ -17,6 +17,7 @@ export default function Detail() {
   const [error, setError] = useState('');
   const [isNarrow, setIsNarrow] = useState(window.innerWidth < 768);
   const [reported, setReported] = useState(false);
+  const [paymentIntent, setPaymentIntent] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsNarrow(window.innerWidth < 768);
@@ -35,13 +36,27 @@ export default function Detail() {
   const owner = data?.owner || {};
   const isOwner = user && owner._id === user._id;
 
-  async function handlePurchase() {
+  async function handleCheckout() {
     setActionLoading(true);
     try {
-      await servicesAPI.purchase(id);
-      alert('Satın alma başarılı!');
+      const { data: pi } = await servicesAPI.checkout(id);
+      setPaymentIntent(pi);
+      setModal('payment');
     } catch (err) {
       alert(err.response?.data?.error || 'Hata');
+    } finally { setActionLoading(false); }
+  }
+
+  async function handleConfirmPayment() {
+    if (!paymentIntent) return;
+    setActionLoading(true);
+    try {
+      await servicesAPI.confirmPayment(id, paymentIntent.paymentIntentId);
+      setModal(null);
+      setPaymentIntent(null);
+      alert('Ödeme başarılı! Satın alma tamamlandı.');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Ödeme başarısız');
     } finally { setActionLoading(false); }
   }
 
@@ -140,13 +155,42 @@ export default function Detail() {
 
           <div style={{ lineHeight: 1.8, color: 'var(--ink)', marginBottom: '1.5rem' }}>{data.description}</div>
 
-          {type === 'project' && data.requiredSkills?.length > 0 && (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h3 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '.75rem' }}>Aranan Beceriler</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem' }}>
-                {data.requiredSkills.map((s) => <span key={s} className="chip chip-violet">{s}</span>)}
-              </div>
-            </div>
+          {type === 'project' && (
+            <>
+              {(data.collaborationType || data.isRemote !== undefined) && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem', marginBottom: '1rem' }}>
+                  {data.collaborationType && (
+                    <span className="chip chip-violet">
+                      {data.collaborationType === 'volunteer' ? 'Gönüllü' : data.collaborationType === 'academic' ? 'Akademik' : data.collaborationType === 'startup' ? 'Startup' : data.collaborationType === 'research' ? 'Araştırma' : 'Yarışma'}
+                    </span>
+                  )}
+                  <span className={`chip ${data.isRemote ? 'chip-lime' : 'chip-slate'}`}>
+                    {data.isRemote ? 'Uzaktan' : 'Yüz Yüze'}
+                  </span>
+                  {data.applicationDeadline && (
+                    <span className="chip chip-amber">Son başvuru: {new Date(data.applicationDeadline).toLocaleDateString('tr-TR')}</span>
+                  )}
+                </div>
+              )}
+              {data.requiredSkills?.length > 0 && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h3 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '.75rem' }}>Aranan Beceriler</h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem' }}>
+                    {data.requiredSkills.map((s) => <span key={s} className="chip chip-violet">{s}</span>)}
+                  </div>
+                </div>
+              )}
+              {data.expectedTimeCommitment && (
+                <div style={{ marginBottom: '1rem', fontSize: '.875rem', color: 'var(--muted)' }}>
+                  Haftalık zaman: <strong>{data.expectedTimeCommitment}</strong>
+                </div>
+              )}
+              {data.projectUrl && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <a href={data.projectUrl} target="_blank" rel="noreferrer" style={{ fontSize: '.875rem', color: 'var(--accent)', fontWeight: 600 }}>🔗 Proje bağlantısı</a>
+                </div>
+              )}
+            </>
           )}
 
           {/* Need offers list (for owner) */}
@@ -201,8 +245,8 @@ export default function Detail() {
                   </div>
                 ) : user ? (
                   <>
-                    <button className="btn btn-primary w-full" disabled={actionLoading} onClick={handlePurchase} style={{ justifyContent: 'center', marginBottom: '.5rem' }}>
-                      {actionLoading ? 'İşleniyor…' : 'Satın Al'}
+                    <button className="btn btn-primary w-full" disabled={actionLoading} onClick={handleCheckout} style={{ justifyContent: 'center', marginBottom: '.5rem' }}>
+                      {actionLoading ? 'İşleniyor…' : '💳 Satın Al'}
                     </button>
                     <Link to={`/review/${owner._id}`} className="btn btn-secondary w-full" style={{ justifyContent: 'center', marginTop: '.5rem' }}>
                       Değerlendir
@@ -337,6 +381,26 @@ export default function Detail() {
           </div>
           <button className="btn btn-accent2" type="submit" disabled={actionLoading}>{actionLoading ? 'Gönderiliyor…' : 'Başvuruyu Gönder'}</button>
         </form>
+      </Modal>
+
+      {/* Payment modal */}
+      <Modal open={modal === 'payment'} onClose={() => { setModal(null); setPaymentIntent(null); }} title="Ödemeyi Tamamla">
+        {paymentIntent && (
+          <div>
+            <div style={{ background: '#f8fafc', borderRadius: '.75rem', padding: '1.25rem', marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '.85rem', color: 'var(--muted)', marginBottom: '.25rem' }}>Hizmet</div>
+              <div style={{ fontWeight: 700, marginBottom: '.75rem' }}>{paymentIntent.serviceName}</div>
+              <div style={{ fontSize: '.85rem', color: 'var(--muted)', marginBottom: '.25rem' }}>Toplam Tutar</div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.75rem', color: 'var(--accent)' }}>₺{paymentIntent.amount}</div>
+            </div>
+            <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '.35rem' }}>
+              🔒 Güvenli ödeme · Mock payment demo
+            </div>
+            <button className="btn btn-primary w-full" disabled={actionLoading} onClick={handleConfirmPayment} style={{ justifyContent: 'center' }}>
+              {actionLoading ? 'İşleniyor…' : '💳 Ödemeyi Onayla'}
+            </button>
+          </div>
+        )}
       </Modal>
     </div>
   );

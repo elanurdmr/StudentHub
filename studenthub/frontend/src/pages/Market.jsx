@@ -10,23 +10,26 @@ export default function Market() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
   const [q, setQ] = useState('');
-  const [sort, setSort] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
+  const [filters, setFilters] = useState({});
 
   useEffect(() => {
     setLoading(true);
     servicesAPI.list({
       category: category || undefined,
       q: q || undefined,
-      sort: sort || undefined,
-      minPrice: minPrice || undefined,
-      maxPrice: maxPrice || undefined,
+      sort: filters.sort || undefined,
+      minPrice: filters.minPrice || undefined,
+      maxPrice: filters.maxPrice || undefined,
+      minRating: filters.minRating || undefined,
+      maxDeliveryDays: filters.maxDeliveryDays || undefined,
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
+      skills: filters.skills || undefined,
     })
-      .then((r) => setServices(r.data))
+      .then((r) => setServices(r.data?.data || r.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [category, q, sort, minPrice, maxPrice]);
+  }, [category, q, filters]);
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
@@ -43,35 +46,20 @@ export default function Market() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <input
-          className="form-control"
-          type="number"
-          min="0"
-          placeholder="Min ₺"
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-          style={{ width: '90px' }}
-        />
-        <input
-          className="form-control"
-          type="number"
-          min="0"
-          placeholder="Max ₺"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-          style={{ width: '90px' }}
-        />
-        <select className="form-control" style={{ width: 'auto' }} value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="">Sırala: Yeni</option>
-          <option value="price_asc">Fiyat: Artan</option>
-          <option value="price_desc">Fiyat: Azalan</option>
-          <option value="rating">Puan</option>
-        </select>
-      </div>
-
       <div className="layout-with-sidebar">
-        <FilterSidebar categories={CATEGORIES} selected={category} onSelect={setCategory} onSearch={setQ} searchPlaceholder="Hizmet ara..." />
+        <FilterSidebar
+          categories={CATEGORIES} selected={category} onSelect={setCategory}
+          onSearch={setQ} searchPlaceholder="Hizmet ara..."
+          filters={filters} onFiltersChange={setFilters}
+          showRating showDelivery showDateRange showSkills showSort
+          sortOptions={[
+            { value: 'price_asc', label: 'Fiyat: Artan' },
+            { value: 'price_desc', label: 'Fiyat: Azalan' },
+            { value: 'rating', label: 'En Yüksek Puan' },
+            { value: 'popular', label: 'En Popüler' },
+            { value: 'newest', label: 'En Yeni' },
+          ]}
+        />
 
         <main>
           {loading ? (

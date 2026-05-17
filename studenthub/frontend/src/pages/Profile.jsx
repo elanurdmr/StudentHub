@@ -3,6 +3,10 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { usersAPI, reviewsAPI, uploadAPI, servicesAPI, projectsAPI, needsAPI } from '../api/client.js';
 import useAuthStore from '../store/authStore.js';
 
+const DEGREE_LABELS = { associate: 'Ön Lisans', bachelor: 'Lisans', master: 'Yüksek Lisans', phd: 'Doktora', certificate: 'Sertifika', other: 'Diğer' };
+const EXP_TYPE_LABELS = { fulltime: 'Tam Zamanlı', parttime: 'Yarı Zamanlı', internship: 'Staj', freelance: 'Serbest', volunteer: 'Gönüllü' };
+const LANG_LEVEL_LABELS = { A1: 'A1', A2: 'A2', B1: 'B1', B2: 'B2', C1: 'C1', C2: 'C2', native: 'Anadil' };
+
 export default function Profile() {
   const { id }            = useParams();
   const navigate          = useNavigate();
@@ -26,6 +30,21 @@ export default function Profile() {
   const [portLoading, setPortLoading]     = useState(false);
   const [portError, setPortError]         = useState('');
 
+  /* Headline & social links */
+  const [editHeadline, setEditHeadline]   = useState(false);
+  const [headline, setHeadline]           = useState('');
+  const [editSocial, setEditSocial]       = useState(false);
+  const [social, setSocial]               = useState({ github: '', linkedin: '', website: '', twitter: '' });
+
+  /* CV sections */
+  const [showEduModal, setShowEduModal]   = useState(false);
+  const [eduForm, setEduForm]             = useState({ institution: '', degree: 'bachelor', field: '', startYear: '', endYear: '', gpa: '' });
+  const [showExpModal, setShowExpModal]   = useState(false);
+  const [expForm, setExpForm]             = useState({ title: '', company: '', type: 'internship', startDate: '', endDate: '', isCurrent: false, description: '' });
+  const [showCertModal, setShowCertModal] = useState(false);
+  const [certForm, setCertForm]           = useState({ name: '', issuer: '', issueDate: '', credentialUrl: '' });
+  const [cvLoading, setCvLoading]         = useState(false);
+
   const fileRef = useRef();
   const isMe    = me?._id === id;
 
@@ -47,9 +66,11 @@ export default function Profile() {
       .then(([p, r, sv, pj, nd]) => {
         setProfile(p.data);
         setBio(p.data.bio || '');
+        setHeadline(p.data.headline || '');
+        setSocial(p.data.socialLinks || { github: '', linkedin: '', website: '', twitter: '' });
         setReviews(r.data);
-        setUserServices(sv.data || []);
-        setUserProjects(pj.data || []);
+        setUserServices(sv.data?.data || sv.data || []);
+        setUserProjects(pj.data?.data || pj.data || []);
         setUserNeeds(nd.data || []);
       })
       .catch(() => {})
@@ -93,6 +114,60 @@ export default function Profile() {
     setProfile(data);
     if (isMe) updateUser(data);
     setEditBio(false);
+  }
+
+  /* ----- Başlık kaydet ----- */
+  async function saveHeadline() {
+    const { data } = await usersAPI.update(id, { headline });
+    setProfile(data); if (isMe) updateUser(data); setEditHeadline(false);
+  }
+
+  /* ----- Sosyal bağlantılar kaydet ----- */
+  async function saveSocial() {
+    const { data } = await usersAPI.update(id, { socialLinks: social });
+    setProfile(data); if (isMe) updateUser(data); setEditSocial(false);
+  }
+
+  /* ----- Eğitim ----- */
+  async function handleAddEducation(e) {
+    e.preventDefault(); setCvLoading(true);
+    try {
+      const { data } = await usersAPI.addEducation(id, eduForm);
+      setProfile(data); if (isMe) updateUser(data);
+      setShowEduModal(false); setEduForm({ institution: '', degree: 'bachelor', field: '', startYear: '', endYear: '', gpa: '' });
+    } finally { setCvLoading(false); }
+  }
+  async function removeEducation(eduId) {
+    const { data } = await usersAPI.removeEducation(id, eduId);
+    setProfile(data); if (isMe) updateUser(data);
+  }
+
+  /* ----- Deneyim ----- */
+  async function handleAddExperience(e) {
+    e.preventDefault(); setCvLoading(true);
+    try {
+      const { data } = await usersAPI.addExperience(id, expForm);
+      setProfile(data); if (isMe) updateUser(data);
+      setShowExpModal(false); setExpForm({ title: '', company: '', type: 'internship', startDate: '', endDate: '', isCurrent: false, description: '' });
+    } finally { setCvLoading(false); }
+  }
+  async function removeExperience(expId) {
+    const { data } = await usersAPI.removeExperience(id, expId);
+    setProfile(data); if (isMe) updateUser(data);
+  }
+
+  /* ----- Sertifika ----- */
+  async function handleAddCertification(e) {
+    e.preventDefault(); setCvLoading(true);
+    try {
+      const { data } = await usersAPI.addCertification(id, certForm);
+      setProfile(data); if (isMe) updateUser(data);
+      setShowCertModal(false); setCertForm({ name: '', issuer: '', issueDate: '', credentialUrl: '' });
+    } finally { setCvLoading(false); }
+  }
+  async function removeCertification(certId) {
+    const { data } = await usersAPI.removeCertification(id, certId);
+    setProfile(data); if (isMe) updateUser(data);
   }
 
   /* ----- Portfolyo ekle ----- */
@@ -154,8 +229,36 @@ export default function Profile() {
             </div>
 
             <h2 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '.25rem' }}>{profile.firstName} {profile.lastName}</h2>
+
+            {/* Headline */}
+            {editHeadline && isMe ? (
+              <div style={{ marginBottom: '.5rem' }}>
+                <input className="form-control" style={{ fontSize: '.85rem' }} maxLength={120} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Kısa başlık..." />
+                <div style={{ display: 'flex', gap: '.5rem', marginTop: '.35rem' }}>
+                  <button className="btn btn-primary btn-sm" onClick={saveHeadline}>Kaydet</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setEditHeadline(false)}>İptal</button>
+                </div>
+              </div>
+            ) : (
+              <p style={{ fontSize: '.85rem', color: 'var(--accent)', fontWeight: 600, marginBottom: '.35rem', cursor: isMe ? 'pointer' : 'default' }} onClick={() => isMe && setEditHeadline(true)}>
+                {profile.headline || (isMe ? '+ Başlık ekle' : '')}
+              </p>
+            )}
+
             {profile.rating > 0 && (
               <div style={{ color: 'var(--amber)', marginBottom: '.5rem' }}>★ {profile.rating} ({profile.reviewCount} değerlendirme)</div>
+            )}
+
+            {/* Profil tamamlama skoru */}
+            {isMe && profile.completionScore > 0 && (
+              <div style={{ marginBottom: '.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.25rem' }}>
+                  <span>Profil doluluk oranı</span><span>%{profile.completionScore}</span>
+                </div>
+                <div style={{ height: 6, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${profile.completionScore}%`, background: profile.completionScore >= 80 ? '#22c55e' : profile.completionScore >= 50 ? '#f59e0b' : '#ef4444', borderRadius: 999, transition: 'width .4s' }} />
+                </div>
+              </div>
             )}
 
             {/* Biyografi */}
@@ -196,6 +299,37 @@ export default function Profile() {
               )}
             </div>
           </div>
+
+          {/* Sosyal bağlantılar */}
+          {(isMe || profile.socialLinks?.github || profile.socialLinks?.linkedin || profile.socialLinks?.website || profile.socialLinks?.twitter) && (
+            <div className="card" style={{ marginTop: '1rem', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.75rem' }}>
+                <h4 style={{ fontFamily: 'Syne, sans-serif', fontSize: '.9rem' }}>Bağlantılar</h4>
+                {isMe && <button onClick={() => setEditSocial(!editSocial)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: '.8rem', fontWeight: 600 }}>{editSocial ? 'Kapat' : '✎ Düzenle'}</button>}
+              </div>
+              {editSocial && isMe ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+                  {['github', 'linkedin', 'website', 'twitter'].map((key) => (
+                    <input key={key} className="form-control" style={{ fontSize: '.8rem' }} placeholder={key.charAt(0).toUpperCase() + key.slice(1) + ' URL'} value={social[key] || ''} onChange={(e) => setSocial((s) => ({ ...s, [key]: e.target.value }))} />
+                  ))}
+                  <div style={{ display: 'flex', gap: '.5rem', marginTop: '.25rem' }}>
+                    <button className="btn btn-primary btn-sm" onClick={saveSocial}>Kaydet</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setEditSocial(false)}>İptal</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+                  {profile.socialLinks?.github && <a href={profile.socialLinks.github} target="_blank" rel="noreferrer" style={{ fontSize: '.8rem', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '.4rem' }}>🐙 GitHub</a>}
+                  {profile.socialLinks?.linkedin && <a href={profile.socialLinks.linkedin} target="_blank" rel="noreferrer" style={{ fontSize: '.8rem', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '.4rem' }}>💼 LinkedIn</a>}
+                  {profile.socialLinks?.website && <a href={profile.socialLinks.website} target="_blank" rel="noreferrer" style={{ fontSize: '.8rem', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '.4rem' }}>🌐 Web Sitesi</a>}
+                  {profile.socialLinks?.twitter && <a href={profile.socialLinks.twitter} target="_blank" rel="noreferrer" style={{ fontSize: '.8rem', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '.4rem' }}>🐦 Twitter</a>}
+                  {isMe && !profile.socialLinks?.github && !profile.socialLinks?.linkedin && !profile.socialLinks?.website && !profile.socialLinks?.twitter && (
+                    <span style={{ fontSize: '.8rem', color: 'var(--muted)' }}>Bağlantı eklenmemiş.</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Beceriler */}
           <div className="card" style={{ marginTop: '1rem', padding: '1.5rem' }}>
@@ -245,6 +379,115 @@ export default function Profile() {
 
         {/* ──────── SAĞ MAIN ──────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+          {/* Eğitim */}
+          {(isMe || profile.education?.length > 0) && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ fontFamily: 'Syne, sans-serif' }}>Eğitim</h3>
+                {isMe && <button className="btn btn-primary btn-sm" onClick={() => setShowEduModal(true)}>+ Ekle</button>}
+              </div>
+              {!profile.education?.length ? (
+                <p style={{ fontSize: '.875rem', color: 'var(--muted)' }}>{isMe ? 'Eğitim bilgisi eklenmemiş.' : 'Paylaşılmamış.'}</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {profile.education.map((edu) => (
+                    <div key={edu._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '.75rem', borderRadius: '.5rem', border: '1px solid var(--border)' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '.9rem' }}>{edu.institution}</div>
+                        <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>{DEGREE_LABELS[edu.degree] || edu.degree} · {edu.field}</div>
+                        <div style={{ fontSize: '.75rem', color: 'var(--muted)' }}>{edu.startYear}{edu.endYear ? ` — ${edu.endYear}` : ' — devam'}{edu.gpa ? ` · GPA: ${edu.gpa}` : ''}</div>
+                      </div>
+                      {isMe && <button onClick={() => removeEducation(edu._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1rem' }}>✕</button>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Deneyim */}
+          {(isMe || profile.experience?.length > 0) && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ fontFamily: 'Syne, sans-serif' }}>Deneyim</h3>
+                {isMe && <button className="btn btn-primary btn-sm" onClick={() => setShowExpModal(true)}>+ Ekle</button>}
+              </div>
+              {!profile.experience?.length ? (
+                <p style={{ fontSize: '.875rem', color: 'var(--muted)' }}>{isMe ? 'Deneyim bilgisi eklenmemiş.' : 'Paylaşılmamış.'}</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {profile.experience.map((exp) => (
+                    <div key={exp._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '.75rem', borderRadius: '.5rem', border: '1px solid var(--border)' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '.9rem' }}>{exp.title}</div>
+                        <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>{exp.company} · {EXP_TYPE_LABELS[exp.type] || exp.type}</div>
+                        <div style={{ fontSize: '.75rem', color: 'var(--muted)' }}>{exp.startDate?.slice(0, 7)}{exp.isCurrent ? ' — Devam ediyor' : exp.endDate ? ` — ${exp.endDate.slice(0, 7)}` : ''}</div>
+                        {exp.description && <p style={{ fontSize: '.8rem', marginTop: '.35rem' }}>{exp.description}</p>}
+                      </div>
+                      {isMe && <button onClick={() => removeExperience(exp._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1rem' }}>✕</button>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sertifikalar */}
+          {(isMe || profile.certifications?.length > 0) && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ fontFamily: 'Syne, sans-serif' }}>Sertifikalar</h3>
+                {isMe && <button className="btn btn-primary btn-sm" onClick={() => setShowCertModal(true)}>+ Ekle</button>}
+              </div>
+              {!profile.certifications?.length ? (
+                <p style={{ fontSize: '.875rem', color: 'var(--muted)' }}>{isMe ? 'Sertifika eklenmemiş.' : 'Paylaşılmamış.'}</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
+                  {profile.certifications.map((cert) => (
+                    <div key={cert._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '.75rem', borderRadius: '.5rem', border: '1px solid var(--border)' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '.9rem' }}>{cert.name}</div>
+                        <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>{cert.issuer}{cert.issueDate ? ` · ${cert.issueDate.slice(0, 7)}` : ''}</div>
+                        {cert.credentialUrl && <a href={cert.credentialUrl} target="_blank" rel="noreferrer" style={{ fontSize: '.75rem', color: 'var(--accent)', fontWeight: 600 }}>🔗 Doğrula</a>}
+                      </div>
+                      {isMe && <button onClick={() => removeCertification(cert._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1rem' }}>✕</button>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Diller */}
+          {profile.languages?.length > 0 && (
+            <div className="card">
+              <h3 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '1rem' }}>Diller</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem' }}>
+                {profile.languages.map((lang, i) => (
+                  <span key={i} className="chip chip-indigo">{lang.name} <span style={{ opacity: .7, fontSize: '.7rem' }}>· {LANG_LEVEL_LABELS[lang.level] || lang.level}</span></span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Takım üyelikleri */}
+          {profile.teamMemberships?.length > 0 && (
+            <div className="card">
+              <h3 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '1rem' }}>Proje Üyelikleri</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+                {profile.teamMemberships.map((tm, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.6rem .75rem', borderRadius: '.5rem', border: '1px solid var(--border)' }}>
+                    <div>
+                      <span style={{ fontWeight: 600, fontSize: '.875rem' }}>{tm.project?.title || 'Proje'}</span>
+                      <span style={{ fontSize: '.75rem', color: 'var(--muted)', marginLeft: '.5rem' }}>{tm.role}</span>
+                    </div>
+                    <span className={`chip ${tm.status === 'active' ? 'chip-lime' : 'chip-slate'}`} style={{ fontSize: '.65rem' }}>{tm.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Kullanıcının ilanları */}
           <div className="card">
@@ -370,6 +613,92 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* ──────── EĞİTİM MODAL ──────── */}
+      {showEduModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={(e) => e.target === e.currentTarget && setShowEduModal(false)}>
+          <div className="card" style={{ width: '100%', maxWidth: 480, padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontFamily: 'Syne, sans-serif' }}>Eğitim Ekle</h3>
+              <button onClick={() => setShowEduModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
+            </div>
+            <form onSubmit={handleAddEducation}>
+              <div className="form-group"><label className="form-label">Kurum *</label><input className="form-control" required value={eduForm.institution} onChange={(e) => setEduForm((f) => ({ ...f, institution: e.target.value }))} placeholder="Üniversite adı" /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group"><label className="form-label">Derece</label><select className="form-control" value={eduForm.degree} onChange={(e) => setEduForm((f) => ({ ...f, degree: e.target.value }))}>{Object.entries(DEGREE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                <div className="form-group"><label className="form-label">Alan</label><input className="form-control" value={eduForm.field} onChange={(e) => setEduForm((f) => ({ ...f, field: e.target.value }))} placeholder="Bilgisayar Müh." /></div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div className="form-group"><label className="form-label">Başlangıç</label><input className="form-control" type="number" placeholder="2020" value={eduForm.startYear} onChange={(e) => setEduForm((f) => ({ ...f, startYear: e.target.value }))} /></div>
+                <div className="form-group"><label className="form-label">Bitiş</label><input className="form-control" type="number" placeholder="2024" value={eduForm.endYear} onChange={(e) => setEduForm((f) => ({ ...f, endYear: e.target.value }))} /></div>
+                <div className="form-group"><label className="form-label">GPA</label><input className="form-control" type="number" step="0.01" placeholder="3.5" value={eduForm.gpa} onChange={(e) => setEduForm((f) => ({ ...f, gpa: e.target.value }))} /></div>
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '.5rem' }}>
+                <button className="btn btn-primary" type="submit" disabled={cvLoading}>{cvLoading ? 'Ekleniyor…' : 'Ekle'}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setShowEduModal(false)}>İptal</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ──────── DENEYİM MODAL ──────── */}
+      {showExpModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={(e) => e.target === e.currentTarget && setShowExpModal(false)}>
+          <div className="card" style={{ width: '100%', maxWidth: 500, padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontFamily: 'Syne, sans-serif' }}>Deneyim Ekle</h3>
+              <button onClick={() => setShowExpModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
+            </div>
+            <form onSubmit={handleAddExperience}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group"><label className="form-label">Pozisyon *</label><input className="form-control" required value={expForm.title} onChange={(e) => setExpForm((f) => ({ ...f, title: e.target.value }))} placeholder="Frontend Developer" /></div>
+                <div className="form-group"><label className="form-label">Şirket *</label><input className="form-control" required value={expForm.company} onChange={(e) => setExpForm((f) => ({ ...f, company: e.target.value }))} placeholder="Şirket adı" /></div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group"><label className="form-label">Tür</label><select className="form-control" value={expForm.type} onChange={(e) => setExpForm((f) => ({ ...f, type: e.target.value }))}>{Object.entries(EXP_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                <div className="form-group"><label className="form-label">Başlangıç</label><input className="form-control" type="date" value={expForm.startDate} onChange={(e) => setExpForm((f) => ({ ...f, startDate: e.target.value }))} /></div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group"><label className="form-label">Bitiş</label><input className="form-control" type="date" value={expForm.endDate} disabled={expForm.isCurrent} onChange={(e) => setExpForm((f) => ({ ...f, endDate: e.target.value }))} /></div>
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', paddingTop: '1.75rem' }}>
+                  <input type="checkbox" id="isCurrent" checked={expForm.isCurrent} onChange={(e) => setExpForm((f) => ({ ...f, isCurrent: e.target.checked, endDate: '' }))} />
+                  <label htmlFor="isCurrent" style={{ fontSize: '.875rem', cursor: 'pointer' }}>Hâlâ devam ediyor</label>
+                </div>
+              </div>
+              <div className="form-group"><label className="form-label">Açıklama</label><textarea className="form-control" rows={2} value={expForm.description} onChange={(e) => setExpForm((f) => ({ ...f, description: e.target.value }))} placeholder="Kısa açıklama…" /></div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '.5rem' }}>
+                <button className="btn btn-primary" type="submit" disabled={cvLoading}>{cvLoading ? 'Ekleniyor…' : 'Ekle'}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setShowExpModal(false)}>İptal</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ──────── SERTİFİKA MODAL ──────── */}
+      {showCertModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={(e) => e.target === e.currentTarget && setShowCertModal(false)}>
+          <div className="card" style={{ width: '100%', maxWidth: 440, padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontFamily: 'Syne, sans-serif' }}>Sertifika Ekle</h3>
+              <button onClick={() => setShowCertModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
+            </div>
+            <form onSubmit={handleAddCertification}>
+              <div className="form-group"><label className="form-label">Sertifika Adı *</label><input className="form-control" required value={certForm.name} onChange={(e) => setCertForm((f) => ({ ...f, name: e.target.value }))} placeholder="AWS Solutions Architect" /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group"><label className="form-label">Veren Kurum</label><input className="form-control" value={certForm.issuer} onChange={(e) => setCertForm((f) => ({ ...f, issuer: e.target.value }))} placeholder="Amazon" /></div>
+                <div className="form-group"><label className="form-label">Tarih</label><input className="form-control" type="date" value={certForm.issueDate} onChange={(e) => setCertForm((f) => ({ ...f, issueDate: e.target.value }))} /></div>
+              </div>
+              <div className="form-group"><label className="form-label">Doğrulama URL</label><input className="form-control" type="url" value={certForm.credentialUrl} onChange={(e) => setCertForm((f) => ({ ...f, credentialUrl: e.target.value }))} placeholder="https://…" /></div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '.5rem' }}>
+                <button className="btn btn-primary" type="submit" disabled={cvLoading}>{cvLoading ? 'Ekleniyor…' : 'Ekle'}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setShowCertModal(false)}>İptal</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ──────── PORTFOLYO MODAL ──────── */}
       {showPortModal && (
