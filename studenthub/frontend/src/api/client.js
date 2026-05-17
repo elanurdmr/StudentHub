@@ -372,7 +372,11 @@ export const adminAPI = {
 export const aiAPI = {
   matchProjects: () => tryOrMock(
     () => api.get('/ai/match-projects'),
-    () => MOCK_PROJECTS.slice(0, 3).map((p) => ({ ...p, aiReason: 'Becerilerinizle yüksek uyum', aiMatchScore: 75 }))
+    () => MOCK_PROJECTS.slice(0, 3).map((p) => ({
+      project: p,
+      reason: 'Becerilerinizle yüksek uyum',
+      matchScore: 75,
+    }))
   ),
 };
 

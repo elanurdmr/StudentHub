@@ -12,17 +12,25 @@ export default function Projects() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
   const [q, setQ] = useState('');
+  const [filters, setFilters] = useState({});
   const [recs, setRecs] = useState([]);
   const [aiExtra, setAiExtra] = useState([]);
   const [aiBusy, setAiBusy] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    projectsAPI.list({ category: category || undefined, q: q || undefined })
-      .then((r) => setProjects(r.data))
+    projectsAPI.list({
+      category: category || undefined,
+      q: q || undefined,
+      sort: filters.sort || undefined,
+      collaborationType: filters.collaborationType || undefined,
+      isRemote: filters.isRemote !== undefined && filters.isRemote !== '' ? filters.isRemote : undefined,
+      requiredSkills: filters.skills || undefined,
+    })
+      .then((r) => setProjects(r.data?.data || r.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [category, q]);
+  }, [category, q, filters]);
 
   useEffect(() => {
     if (!token) {
@@ -39,11 +47,15 @@ export default function Projects() {
     try {
       const { data } = await aiAPI.matchProjects();
       const flat = Array.isArray(data)
-        ? data.map((row) => ({
-            ...row.project,
-            aiReason: row.reason,
-            aiMatchScore: row.matchScore,
-          }))
+        ? data
+            .map((row) => {
+              if (row.project && row.project._id) {
+                return { ...row.project, aiReason: row.reason, aiMatchScore: row.matchScore };
+              }
+              if (row._id) return row;
+              return null;
+            })
+            .filter(Boolean)
         : [];
       setAiExtra(flat);
     } catch {
@@ -69,19 +81,29 @@ export default function Projects() {
       </div>
 
       <div className="layout-with-sidebar">
-        <FilterSidebar categories={CATEGORIES} selected={category} onSelect={setCategory} onSearch={setQ} searchPlaceholder="Proje ara..." />
+        <FilterSidebar
+          categories={CATEGORIES} selected={category} onSelect={setCategory}
+          onSearch={setQ} searchPlaceholder="Proje ara..."
+          filters={filters} onFiltersChange={setFilters}
+          showCollaborationType showIsRemote showSkills showSort
+          sortOptions={[
+            { value: 'newest', label: 'En Yeni' },
+            { value: 'most_applied', label: 'En Çok Başvurulan' },
+            { value: 'deadline', label: 'Son Başvuru Tarihi' },
+          ]}
+        />
 
         <main>
           {token && (
             <section style={{ marginBottom: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '.75rem', marginBottom: '1rem' }}>
                 <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>
-                  🤖 Sana uygun projeler
-                  {aiExtra.length > 0 ? ' (Gemini)' : ''}
+                  <b> Sana uygun projeler </b>
+                  {aiExtra.length > 0 ? '' : ''}
                   {recs.length > 0 && aiExtra.length === 0 ? ' (skill eşlemesi veya AI)' : ''}
                 </h2>
                 <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy} onClick={loadAiMatches}>
-                  {aiBusy ? 'Çalışıyor…' : 'Gemini ile eşleştir'}
+                  {aiBusy ? 'Çalışıyor…' : 'Eşleştir'}
                 </button>
               </div>
               {(aiExtra.length > 0 ? aiExtra : recs).length === 0 ? (
@@ -97,7 +119,7 @@ export default function Projects() {
               )}
             </section>
           )}
-
+            ---------------------------------------------------------------------------------------------------
           {loading ? (
             <div className="empty-state"><p>Yükleniyor…</p></div>
           ) : projects.length === 0 ? (

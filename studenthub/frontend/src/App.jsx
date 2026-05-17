@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/layout/Navbar.jsx';
 import ProtectedRoute from './components/layout/ProtectedRoute.jsx';
+import OpportunityPopup from './components/ui/OpportunityPopup.jsx';
 
 import Landing from './pages/Landing.jsx';
 import Auth from './pages/Auth.jsx';
@@ -22,6 +23,7 @@ export default function App() {
   return (
     <>
       <Navbar />
+      <OpportunityPopup />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />

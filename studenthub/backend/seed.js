@@ -11,6 +11,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 import User from './models/User.js';
+import Skill from './models/Skill.js';
 import Service from './models/Service.js';
 import Project from './models/Project.js';
 import Need from './models/Need.js';
@@ -34,6 +35,7 @@ async function seed() {
   /* ── Tüm koleksiyonları temizle ── */
   await Promise.all([
     User.deleteMany({}),
+    Skill.deleteMany({}),
     Service.deleteMany({}),
     Project.deleteMany({}),
     Need.deleteMany({}),
@@ -51,6 +53,107 @@ async function seed() {
     OneriLog.deleteMany({}),
   ]);
   console.log('🗑  Mevcut veriler temizlendi\n');
+
+  /* ───────────────────────────────────────────────────────
+   * 0. SKILLS (80+ kayıt)
+   * ─────────────────────────────────────────────────────── */
+  const skillsData = [
+    // Programlama Dilleri
+    { name: 'JavaScript', slug: 'javascript', category: 'Programlama Dili', aliases: ['js', 'ecmascript'], usageCount: 980, isVerified: true },
+    { name: 'TypeScript', slug: 'typescript', category: 'Programlama Dili', aliases: ['ts'], usageCount: 750, isVerified: true },
+    { name: 'Python', slug: 'python', category: 'Programlama Dili', aliases: ['py'], usageCount: 920, isVerified: true },
+    { name: 'Java', slug: 'java', category: 'Programlama Dili', aliases: [], usageCount: 810, isVerified: true },
+    { name: 'C#', slug: 'csharp', category: 'Programlama Dili', aliases: ['c-sharp', 'dotnet-csharp'], usageCount: 620, isVerified: true },
+    { name: 'C++', slug: 'cpp', category: 'Programlama Dili', aliases: ['c-plus-plus'], usageCount: 480, isVerified: true },
+    { name: 'Go', slug: 'go', category: 'Programlama Dili', aliases: ['golang'], usageCount: 390, isVerified: true },
+    { name: 'Rust', slug: 'rust', category: 'Programlama Dili', aliases: [], usageCount: 280, isVerified: true },
+    { name: 'Swift', slug: 'swift', category: 'Programlama Dili', aliases: [], usageCount: 340, isVerified: true },
+    { name: 'Kotlin', slug: 'kotlin', category: 'Programlama Dili', aliases: [], usageCount: 310, isVerified: true },
+    { name: 'PHP', slug: 'php', category: 'Programlama Dili', aliases: [], usageCount: 540, isVerified: true },
+    { name: 'Ruby', slug: 'ruby', category: 'Programlama Dili', aliases: [], usageCount: 220, isVerified: true },
+    { name: 'R', slug: 'r', category: 'Programlama Dili', aliases: ['r-lang'], usageCount: 300, isVerified: true },
+    { name: 'MATLAB', slug: 'matlab', category: 'Programlama Dili', aliases: [], usageCount: 210, isVerified: true },
+    { name: 'Scala', slug: 'scala', category: 'Programlama Dili', aliases: [], usageCount: 150, isVerified: true },
+    // Framework & Library
+    { name: 'React', slug: 'react', category: 'Framework', aliases: ['react.js', 'reactjs'], usageCount: 870, isVerified: true },
+    { name: 'Vue.js', slug: 'vuejs', category: 'Framework', aliases: ['vue', 'vuejs'], usageCount: 530, isVerified: true },
+    { name: 'Angular', slug: 'angular', category: 'Framework', aliases: ['angularjs'], usageCount: 490, isVerified: true },
+    { name: 'Next.js', slug: 'nextjs', category: 'Framework', aliases: ['next'], usageCount: 640, isVerified: true },
+    { name: 'Node.js', slug: 'nodejs', category: 'Framework', aliases: ['node', 'nodejs'], usageCount: 780, isVerified: true },
+    { name: 'Express.js', slug: 'expressjs', category: 'Framework', aliases: ['express'], usageCount: 610, isVerified: true },
+    { name: 'Spring Boot', slug: 'spring-boot', category: 'Framework', aliases: ['spring'], usageCount: 520, isVerified: true },
+    { name: 'Django', slug: 'django', category: 'Framework', aliases: [], usageCount: 430, isVerified: true },
+    { name: 'FastAPI', slug: 'fastapi', category: 'Framework', aliases: [], usageCount: 350, isVerified: true },
+    { name: 'Laravel', slug: 'laravel', category: 'Framework', aliases: [], usageCount: 380, isVerified: true },
+    { name: 'Flutter', slug: 'flutter', category: 'Framework', aliases: [], usageCount: 460, isVerified: true },
+    { name: 'React Native', slug: 'react-native', category: 'Framework', aliases: ['rn'], usageCount: 410, isVerified: true },
+    { name: 'TensorFlow', slug: 'tensorflow', category: 'Framework', aliases: ['tf'], usageCount: 390, isVerified: true },
+    { name: 'PyTorch', slug: 'pytorch', category: 'Framework', aliases: [], usageCount: 360, isVerified: true },
+    { name: 'Unity', slug: 'unity', category: 'Framework', aliases: ['unity3d'], usageCount: 320, isVerified: true },
+    // Veritabanı
+    { name: 'MongoDB', slug: 'mongodb', category: 'Veritabanı', aliases: ['mongo'], usageCount: 620, isVerified: true },
+    { name: 'PostgreSQL', slug: 'postgresql', category: 'Veritabanı', aliases: ['postgres'], usageCount: 580, isVerified: true },
+    { name: 'MySQL', slug: 'mysql', category: 'Veritabanı', aliases: [], usageCount: 550, isVerified: true },
+    { name: 'Redis', slug: 'redis', category: 'Veritabanı', aliases: [], usageCount: 380, isVerified: true },
+    { name: 'SQLite', slug: 'sqlite', category: 'Veritabanı', aliases: [], usageCount: 290, isVerified: true },
+    { name: 'Firebase', slug: 'firebase', category: 'Veritabanı', aliases: [], usageCount: 420, isVerified: true },
+    { name: 'Elasticsearch', slug: 'elasticsearch', category: 'Veritabanı', aliases: ['elastic'], usageCount: 230, isVerified: true },
+    // Tasarım
+    { name: 'Figma', slug: 'figma', category: 'Tasarım', aliases: [], usageCount: 720, isVerified: true },
+    { name: 'Photoshop', slug: 'photoshop', category: 'Tasarım', aliases: ['ps'], usageCount: 650, isVerified: true },
+    { name: 'Illustrator', slug: 'illustrator', category: 'Tasarım', aliases: ['ai', 'adobe-ai'], usageCount: 490, isVerified: true },
+    { name: 'Sketch', slug: 'sketch', category: 'Tasarım', aliases: [], usageCount: 280, isVerified: true },
+    { name: 'Adobe XD', slug: 'adobe-xd', category: 'Tasarım', aliases: ['xd'], usageCount: 310, isVerified: true },
+    { name: 'Canva', slug: 'canva', category: 'Tasarım', aliases: [], usageCount: 400, isVerified: true },
+    { name: 'InDesign', slug: 'indesign', category: 'Tasarım', aliases: [], usageCount: 250, isVerified: true },
+    { name: 'Blender', slug: 'blender', category: 'Tasarım', aliases: [], usageCount: 290, isVerified: true },
+    { name: 'After Effects', slug: 'after-effects', category: 'Tasarım', aliases: ['ae'], usageCount: 320, isVerified: true },
+    { name: 'Premiere Pro', slug: 'premiere-pro', category: 'Tasarım', aliases: ['premiere'], usageCount: 280, isVerified: true },
+    { name: 'AutoCAD', slug: 'autocad', category: 'Tasarım', aliases: [], usageCount: 200, isVerified: true },
+    { name: 'SolidWorks', slug: 'solidworks', category: 'Tasarım', aliases: [], usageCount: 180, isVerified: true },
+    // DevOps
+    { name: 'Docker', slug: 'docker', category: 'DevOps', aliases: [], usageCount: 560, isVerified: true },
+    { name: 'Kubernetes', slug: 'kubernetes', category: 'DevOps', aliases: ['k8s'], usageCount: 380, isVerified: true },
+    { name: 'AWS', slug: 'aws', category: 'DevOps', aliases: ['amazon-web-services'], usageCount: 490, isVerified: true },
+    { name: 'Git', slug: 'git', category: 'DevOps', aliases: ['version-control'], usageCount: 880, isVerified: true },
+    { name: 'CI/CD', slug: 'cicd', category: 'DevOps', aliases: ['continuous-integration'], usageCount: 340, isVerified: true },
+    { name: 'Linux', slug: 'linux', category: 'DevOps', aliases: ['ubuntu', 'debian'], usageCount: 420, isVerified: true },
+    { name: 'Nginx', slug: 'nginx', category: 'DevOps', aliases: [], usageCount: 280, isVerified: true },
+    // Yapay Zeka
+    { name: 'Machine Learning', slug: 'machine-learning', category: 'Yapay Zeka', aliases: ['ml', 'makine ogrenmesi'], usageCount: 510, isVerified: true },
+    { name: 'Deep Learning', slug: 'deep-learning', category: 'Yapay Zeka', aliases: ['dl'], usageCount: 380, isVerified: true },
+    { name: 'NLP', slug: 'nlp', category: 'Yapay Zeka', aliases: ['natural language processing', 'dogal dil isleme'], usageCount: 290, isVerified: true },
+    { name: 'Computer Vision', slug: 'computer-vision', category: 'Yapay Zeka', aliases: ['cv', 'goruntu isleme'], usageCount: 270, isVerified: true },
+    { name: 'OpenAI API', slug: 'openai-api', category: 'Yapay Zeka', aliases: ['gpt', 'chatgpt'], usageCount: 460, isVerified: true },
+    { name: 'Data Science', slug: 'data-science', category: 'Yapay Zeka', aliases: ['veri bilimi'], usageCount: 440, isVerified: true },
+    // Mobil
+    { name: 'iOS', slug: 'ios', category: 'Mobil', aliases: ['iphone', 'apple'], usageCount: 310, isVerified: true },
+    { name: 'Android', slug: 'android', category: 'Mobil', aliases: [], usageCount: 350, isVerified: true },
+    { name: 'ARKit', slug: 'arkit', category: 'Mobil', aliases: ['ar'], usageCount: 120, isVerified: true },
+    // Oyun
+    { name: 'Unreal Engine', slug: 'unreal-engine', category: 'Oyun', aliases: ['ue5', 'ue4'], usageCount: 180, isVerified: true },
+    { name: 'Game Design', slug: 'game-design', category: 'Oyun', aliases: ['oyun tasarimi'], usageCount: 150, isVerified: true },
+    // Soft Skill
+    { name: 'Proje Yönetimi', slug: 'proje-yonetimi', category: 'Soft Skill', aliases: ['project management', 'pm'], usageCount: 340, isVerified: true },
+    { name: 'Takım Çalışması', slug: 'takim-calismasi', category: 'Soft Skill', aliases: ['teamwork'], usageCount: 460, isVerified: true },
+    { name: 'İletişim', slug: 'iletisim', category: 'Soft Skill', aliases: ['communication'], usageCount: 390, isVerified: true },
+    { name: 'Problem Çözme', slug: 'problem-cozme', category: 'Soft Skill', aliases: ['problem solving'], usageCount: 420, isVerified: true },
+    // Dil
+    { name: 'İngilizce', slug: 'ingilizce', category: 'Dil', aliases: ['english', 'ingilizce ceviri'], usageCount: 780, isVerified: true },
+    { name: 'Almanca', slug: 'almanca', category: 'Dil', aliases: ['german', 'deutsch'], usageCount: 180, isVerified: true },
+    { name: 'Fransızca', slug: 'fransizca', category: 'Dil', aliases: ['french', 'francais'], usageCount: 130, isVerified: true },
+    // Diğer
+    { name: 'SPSS', slug: 'spss', category: 'Diğer', aliases: [], usageCount: 210, isVerified: true },
+    { name: 'Veri Analizi', slug: 'veri-analizi', category: 'Diğer', aliases: ['data analysis'], usageCount: 380, isVerified: true },
+    { name: 'SEO', slug: 'seo', category: 'Diğer', aliases: ['search engine optimization'], usageCount: 310, isVerified: true },
+    { name: 'Arduino', slug: 'arduino', category: 'Diğer', aliases: [], usageCount: 190, isVerified: true },
+    { name: 'D3.js', slug: 'd3js', category: 'Framework', aliases: ['d3'], usageCount: 170, isVerified: true },
+    { name: 'GraphQL', slug: 'graphql', category: 'Framework', aliases: [], usageCount: 310, isVerified: true },
+    { name: 'Tailwind CSS', slug: 'tailwind-css', category: 'Framework', aliases: ['tailwind'], usageCount: 480, isVerified: true },
+  ];
+
+  const skills = await Skill.insertMany(skillsData);
+  console.log(`🎯 ${skills.length} beceri oluşturuldu`);
 
   /* ───────────────────────────────────────────────────────
    * 1. USERS (14 kayıt — 1 admin + 13 kullanıcı)
@@ -438,6 +541,10 @@ async function seed() {
       requiredSkills: ['React', 'Python', 'OpenAI API'],
       teamSize: 4,
       duration: '3 ay',
+      collaborationType: 'academic',
+      isRemote: true,
+      applicationDeadline: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+      expectedTimeCommitment: '10 saat/hafta',
       status: 'recruiting',
       applicationCount: 7,
       tags: ['ai', 'eğitim'],
@@ -450,6 +557,10 @@ async function seed() {
       requiredSkills: ['React Native', 'Node.js', 'MongoDB'],
       teamSize: 3,
       duration: '4 ay',
+      collaborationType: 'startup',
+      isRemote: true,
+      applicationDeadline: new Date(Date.now() + 14 * 24 * 3600 * 1000),
+      expectedTimeCommitment: '15 saat/hafta',
       status: 'recruiting',
       applicationCount: 12,
       tags: ['mobil', 'pazaryeri'],
@@ -462,6 +573,9 @@ async function seed() {
       requiredSkills: ['Swift', 'ARKit', 'Unity'],
       teamSize: 3,
       duration: '5 ay',
+      collaborationType: 'competition',
+      isRemote: false,
+      expectedTimeCommitment: '12 saat/hafta',
       status: 'active',
       applicationCount: 9,
       tags: ['ar', 'kampüs'],
@@ -474,6 +588,10 @@ async function seed() {
       requiredSkills: ['Vue.js', 'Laravel', 'MySQL'],
       teamSize: 5,
       duration: '6 ay',
+      collaborationType: 'volunteer',
+      isRemote: true,
+      applicationDeadline: new Date(Date.now() + 45 * 24 * 3600 * 1000),
+      expectedTimeCommitment: '8 saat/hafta',
       status: 'recruiting',
       applicationCount: 3,
       tags: ['etkinlik', 'kulüp'],
@@ -486,6 +604,8 @@ async function seed() {
       requiredSkills: ['Java', 'Spring Boot', 'React'],
       teamSize: 4,
       duration: '4 ay',
+      collaborationType: 'academic',
+      isRemote: true,
       status: 'completed',
       applicationCount: 15,
       tags: ['eğitim', 'not'],
@@ -495,10 +615,14 @@ async function seed() {
       owner: burak._id,
       title: 'Açık Kaynak Siber Tehdit Haritası',
       description: 'Anlık siber saldırı verilerini çekip harita üzerinde görselleştiren web tabanlı bir dashboard projesi.',
-      category: 'Siber Güvenlik',
+      category: 'Yazılım',
       requiredSkills: ['Python', 'D3.js', 'WebSockets', 'Linux'],
       teamSize: 3,
       duration: '2 ay',
+      collaborationType: 'research',
+      isRemote: true,
+      applicationDeadline: new Date(Date.now() + 20 * 24 * 3600 * 1000),
+      expectedTimeCommitment: '10 saat/hafta',
       status: 'recruiting',
       applicationCount: 5,
       tags: ['güvenlik', 'dashboard', 'maps'],
@@ -511,6 +635,10 @@ async function seed() {
       requiredSkills: ['Node.js', 'OpenAI API', 'SEO'],
       teamSize: 4,
       duration: '5 ay',
+      collaborationType: 'startup',
+      isRemote: true,
+      applicationDeadline: new Date(Date.now() + 25 * 24 * 3600 * 1000),
+      expectedTimeCommitment: '20 saat/hafta',
       status: 'recruiting',
       applicationCount: 8,
       tags: ['seo', 'ai', 'saas'],
@@ -523,6 +651,9 @@ async function seed() {
       requiredSkills: ['SolidWorks', 'Arduino', 'C++'],
       teamSize: 3,
       duration: '3 ay',
+      collaborationType: 'competition',
+      isRemote: false,
+      expectedTimeCommitment: '15 saat/hafta',
       status: 'active',
       applicationCount: 4,
       tags: ['iot', 'hardware', 'solidworks'],

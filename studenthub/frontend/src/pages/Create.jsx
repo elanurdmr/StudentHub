@@ -19,7 +19,7 @@ export default function Create() {
   const isEdit   = !!(editType && editId);
 
   const [type, setType] = useState(editType || 'service');
-  const [form, setForm] = useState({ title: '', description: '', category: '', price: '', budget: '', deliveryDays: '', teamSize: '', duration: '', requiredSkills: '' });
+  const [form, setForm] = useState({ title: '', description: '', category: '', price: '', budget: '', deliveryDays: '', teamSize: '', duration: '', requiredSkills: '', collaborationType: 'volunteer', expectedTimeCommitment: '', isRemote: true, applicationDeadline: '', projectUrl: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [serviceImage, setServiceImage] = useState('');
@@ -42,6 +42,11 @@ export default function Create() {
         teamSize: data.teamSize ?? '',
         duration: data.duration || '',
         requiredSkills: (data.requiredSkills || []).join(', '),
+        collaborationType: data.collaborationType || 'volunteer',
+        expectedTimeCommitment: data.expectedTimeCommitment || '',
+        isRemote: data.isRemote !== false,
+        applicationDeadline: data.applicationDeadline ? data.applicationDeadline.slice(0, 10) : '',
+        projectUrl: data.projectUrl || '',
       });
       if (editType === 'service' && data.image) setServiceImage(data.image);
     }).catch(() => {});
@@ -75,7 +80,14 @@ export default function Create() {
         navigate(`/detail/need/${res.data._id}`);
       } else {
         const skills = form.requiredSkills.split(',').map((s) => s.trim()).filter(Boolean);
-        const payload = { title: form.title, description: form.description, category: form.category, teamSize: Number(form.teamSize) || 3, duration: form.duration, requiredSkills: skills };
+        const payload = {
+          title: form.title, description: form.description, category: form.category,
+          teamSize: Number(form.teamSize) || 3, duration: form.duration, requiredSkills: skills,
+          collaborationType: form.collaborationType, expectedTimeCommitment: form.expectedTimeCommitment,
+          isRemote: form.isRemote,
+          ...(form.applicationDeadline ? { applicationDeadline: form.applicationDeadline } : {}),
+          ...(form.projectUrl ? { projectUrl: form.projectUrl } : {}),
+        };
         res = isEdit ? await projectsAPI.update(editId, payload) : await projectsAPI.create(payload);
         navigate(`/detail/project/${res.data._id}`);
       }
@@ -180,17 +192,50 @@ export default function Create() {
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
+                  <label className="form-label">İş Birliği Türü</label>
+                  <select className="form-control" name="collaborationType" value={form.collaborationType} onChange={handleChange}>
+                    <option value="volunteer">Gönüllü</option>
+                    <option value="academic">Akademik</option>
+                    <option value="startup">Startup</option>
+                    <option value="research">Araştırma</option>
+                    <option value="competition">Yarışma</option>
+                  </select>
+                </div>
+                <div className="form-group">
                   <label className="form-label">Ekip Büyüklüğü</label>
                   <input className="form-control" name="teamSize" type="number" min="1" value={form.teamSize} onChange={handleChange} />
                 </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label">Süre</label>
                   <input className="form-control" name="duration" value={form.duration} onChange={handleChange} placeholder="örn. 3 ay" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Haftalık Zaman (saat)</label>
+                  <input className="form-control" name="expectedTimeCommitment" value={form.expectedTimeCommitment} onChange={handleChange} placeholder="örn. 10 saat/hafta" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Başvuru Son Tarihi</label>
+                  <input className="form-control" name="applicationDeadline" type="date" value={form.applicationDeadline} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Çalışma Şekli</label>
+                  <select className="form-control" name="isRemote" value={form.isRemote} onChange={(e) => setForm((f) => ({ ...f, isRemote: e.target.value === 'true' }))}>
+                    <option value="true">Uzaktan</option>
+                    <option value="false">Yüz Yüze</option>
+                  </select>
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Gerekli Beceriler (virgülle ayır)</label>
                 <input className="form-control" name="requiredSkills" value={form.requiredSkills} onChange={handleChange} placeholder="React, Node.js, Figma" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Proje URL (isteğe bağlı)</label>
+                <input className="form-control" name="projectUrl" type="url" value={form.projectUrl} onChange={handleChange} placeholder="https://github.com/..." />
               </div>
             </>
           )}
