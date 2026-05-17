@@ -72,7 +72,7 @@ export const MOCK_REPORTS = [];
 
 /* Mock token ve kullanıcı oturumu */
 export function mockLogin() {
-  return { token: 'mock-token-123', user: MOCK_USER };
+  return { accessToken: 'mock-token-123', user: MOCK_USER };
 }
 
 /* Yardımcı: mock response wrapper */

@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import xssClean from 'xss-clean';
+import cookieParser from 'cookie-parser';
 
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
@@ -25,10 +26,12 @@ import adminRoutes from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
 import favoritesRoutes from './routes/favorites.js';
 import reportsRoutes from './routes/reports.js';
+import skillsRoutes from './routes/skills.js';
 import Message from './models/Message.js';
 import Notification from './models/Notification.js';
 import User from './models/User.js';
 import { userBelongsToConversation } from './utils/conversation.js';
+import { globalErrorHandler } from './middleware/errorHandler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,9 +42,16 @@ const io = new Server(httpServer, {
   cors: { origin: process.env.CLIENT_URL, credentials: true },
 });
 
+const userSockets = new Map();
+
+// io ve userSockets'i routes'dan erişilebilir kıl
+app.set('io', io);
+app.set('userSockets', userSockets);
+
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(xssClean());
+app.use(cookieParser());
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -71,10 +81,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/skills', skillsRoutes);
 
 /* ── Socket.io ── */
-const userSockets = new Map();
-
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
   if (!token) return next(new Error('Yetkisiz'));
@@ -91,9 +100,7 @@ io.on('connection', async (socket) => {
   userSockets.set(userId, socket.id);
   try {
     await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
-  } catch {
-    /* yok say */
-  }
+  } catch { /* yok say */ }
   io.emit('presence', { userId, online: true });
 
   socket.on('join_conversation', (convId) => socket.join(convId));
@@ -148,12 +155,13 @@ io.on('connection', async (socket) => {
     userSockets.delete(userId);
     try {
       await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen: new Date() });
-    } catch {
-      /* */
-    }
+    } catch { /* */ }
     io.emit('presence', { userId, online: false });
   });
 });
+
+/* ── Global Error Handler ── */
+app.use(globalErrorHandler);
 
 /* ── DB + Start ── */
 mongoose
