@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Project from '../models/Project.js';
+import { calculateDetailedMatch } from './skillMatchingService.js';
 
 function normalizeSkill(value) {
   return String(value || '')
@@ -41,37 +42,35 @@ export async function fetchGroqProjectMatches(userId) {
 
   if (projects.length === 0) return [];
 
-  const userSkills = (user.skills || [])
-    .map((s) => {
-      if (typeof s === 'string') return s;
-      if (s && typeof s === 'object') return String(s.name || '');
-      return '';
-    })
+  // Ham skill listesi (skillMatchingService alias + semantic matching için object format korunmalı)
+  const userSkillsRaw = user.skills || [];
+
+  // Görüntüleme için normalize edilmiş isim listesi (prompt'ta kullanmak için)
+  const userSkillNames = userSkillsRaw
+    .map((s) => (typeof s === 'string' ? s : s?.name || ''))
     .map(normalizeSkill)
     .filter(Boolean);
-  const userSkillSet = new Set(userSkills);
 
-  // Her projeye skill eşleşme skoru ver
+  // Her projeye skillMatchingService'in gelişmiş algoritmasıyla skor ver
   const scoredProjects = projects.map((p) => {
+    const { score, matchedSkills } = calculateDetailedMatch(userSkillsRaw, p.requiredSkills || []);
     const required = (p.requiredSkills || []).map(normalizeSkill).filter(Boolean);
-    const matched = required.filter((skill) => userSkillSet.has(skill));
-    const ratio = required.length ? matched.length / required.length : 0;
-    return { project: p, required, matched, matchScore: Math.round(ratio * 100) };
+    return { project: p, required, matched: matchedSkills, matchScore: score };
   });
 
-  // Skill eşleşmesi olanları skor sırasına göre al, yoksa genel popüler projeleri al
+  // Eşleşme skoru olanları sırala; yoksa ilk 3 projeyi al
   const candidates = scoredProjects
     .filter((p) => p.matchScore > 0)
     .sort((a, b) => b.matchScore - a.matchScore);
 
   const top3 = candidates.length > 0
     ? candidates.slice(0, 3)
-    : scoredProjects.slice(0, 3); // skill yoksa ilk 3 proje
+    : scoredProjects.slice(0, 3);
 
   if (top3.length === 0) return [];
 
   // Groq'a sadece bu 3 proje için Türkçe reason ürettir
-  const skillsStr = userSkills.length ? userSkills.join(', ') : '(belirtilmedi)';
+  const skillsStr = userSkillNames.length ? userSkillNames.join(', ') : '(belirtilmedi)';
   const listStr = top3
     .map((item) => {
       const p = item.project;
