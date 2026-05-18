@@ -19,7 +19,7 @@ function optionalAuth(req, res, next) {
 
 router.get('/', optionalAuth, asyncHandler(async (req, res) => {
   const { category, q, owner } = req.query;
-  const filter = {};
+  const filter = { isApproved: true };
   if (owner) filter.owner = owner;
   else filter.status = 'open';
   if (category) filter.category = category;

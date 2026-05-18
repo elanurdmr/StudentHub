@@ -24,7 +24,7 @@ const router = Router();
 
 router.get('/', optionalAuth, asyncHandler(async (req, res) => {
   const { category, q, owner, requiredSkills, collaborationType, isRemote, page = 1, limit = 20, sort } = req.query;
-  const filter = {};
+  const filter = { isApproved: true };
   if (owner) filter.owner = owner;
   if (category) filter.category = category;
   if (collaborationType) filter.collaborationType = collaborationType;

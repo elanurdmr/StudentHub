@@ -28,7 +28,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     page = 1, limit = 20,
   } = req.query;
 
-  const filter = { isActive: true };
+  const filter = { isActive: true, isApproved: true };
   if (owner) filter.owner = owner;
   if (category) filter.category = category;
   if (q) filter.$or = [

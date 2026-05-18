@@ -45,8 +45,9 @@ export default function Navbar() {
         <NavLink to="/market">Hizmetler</NavLink>
         <NavLink to="/projects">Projeler</NavLink>
         <NavLink to="/needs">İhtiyaçlar</NavLink>
-        {user && <NavLink to="/favorites">Favoriler</NavLink>}
+        {user && user.role !== 'admin' && <NavLink to="/favorites">Favoriler</NavLink>}
         {user && <NavLink to="/dashboard">Panel</NavLink>}
+        {user?.role === 'admin' && <NavLink to="/admin" style={{ color: 'var(--coral)', fontWeight: 700 }}>⚙ Admin</NavLink>}
       </div>
 
       <div className="navbar-actions">

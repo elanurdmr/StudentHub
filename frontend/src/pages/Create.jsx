@@ -79,10 +79,12 @@ export default function Create() {
           ...(serviceImage ? { image: serviceImage } : {}),
         };
         res = isEdit ? await servicesAPI.update(editId, payload) : await servicesAPI.create(payload);
+        if (!isEdit) { alert('✅ Hizmetiniz oluşturuldu! Admin onayından sonra herkese görünecek.'); navigate('/dashboard'); return; }
         navigate(`/detail/service/${res.data._id}`);
       } else if (type === 'need') {
         const payload = { title: form.title, description: form.description, category: form.category, budget: Number(form.budget) };
         res = isEdit ? await needsAPI.update(editId, payload) : await needsAPI.create(payload);
+        if (!isEdit) { alert('✅ İhtiyaç ilanınız oluşturuldu! Admin onayından sonra herkese görünecek.'); navigate('/dashboard'); return; }
         navigate(`/detail/need/${res.data._id}`);
       } else {
         const skills = form.requiredSkills.split(',').map((s) => s.trim()).filter(Boolean);
@@ -96,6 +98,7 @@ export default function Create() {
           ...(form.projectUrl ? { projectUrl: form.projectUrl } : {}),
         };
         res = isEdit ? await projectsAPI.update(editId, payload) : await projectsAPI.create(payload);
+        if (!isEdit) { alert('✅ Proje ilanınız oluşturuldu! Admin onayından sonra herkese görünecek.'); navigate('/dashboard'); return; }
         navigate(`/detail/project/${res.data._id}`);
       }
     } catch (err) {

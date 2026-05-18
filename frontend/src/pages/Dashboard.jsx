@@ -1,10 +1,118 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { dashboardAPI, servicesAPI, aiAPI } from '../api/client.js';
+import { dashboardAPI, servicesAPI, aiAPI, adminAPI } from '../api/client.js';
 import useAuthStore from '../store/authStore.js';
+
+function AdminDashboard({ user }) {
+  const [stats, setStats] = useState(null);
+  const [pending, setPending] = useState({ services: [], projects: [], needs: [] });
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    adminAPI.stats().then((r) => setStats(r.data)).catch(() => {});
+    adminAPI.pending().then((r) => setPending(r.data)).catch(() => {});
+    adminAPI.logs().then((r) => setLogs(r.data)).catch(() => {});
+  }, []);
+
+  const pendingTotal = (pending.services?.length || 0) + (pending.projects?.length || 0) + (pending.needs?.length || 0);
+
+  const actionLabels = {
+    banUser: '🚫 Kullanıcı askıya alındı',
+    unbanUser: '✅ Kullanıcı aktif edildi',
+    approve: '✅ İlan onaylandı',
+    reject: '❌ İlan reddedildi',
+    removeService: '🗑 Hizmet silindi',
+    removeProject: '🗑 Proje silindi',
+    removeNeed: '🗑 İhtiyaç silindi',
+    unauthorized_access: '⚠️ Yetkisiz erişim denemesi',
+  };
+
+  return (
+    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <div className="chip chip-coral" style={{ marginBottom: '.75rem' }}>Admin</div>
+        <h1 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.75rem' }}>
+          Hoş geldin, {user?.firstName} ⚙️
+        </h1>
+        <p style={{ color: 'var(--muted)', marginTop: '.35rem' }}>Platform genel durumu</p>
+      </div>
+
+      {/* Platform istatistikleri */}
+      <div className="grid-4" style={{ marginBottom: '2rem' }}>
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '2rem', color: 'var(--accent)' }}>{stats?.totalUsers ?? '—'}</div>
+          <div style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Toplam Kullanıcı</div>
+          {stats?.newToday > 0 && <div style={{ fontSize: '.75rem', color: 'var(--teal)', marginTop: '.25rem' }}>+{stats.newToday} bugün</div>}
+        </div>
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '2rem', color: 'var(--teal)' }}>{stats?.totalServices ?? '—'}</div>
+          <div style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Aktif Hizmet</div>
+        </div>
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '2rem', color: 'var(--accent2)' }}>{(stats?.totalProjects ?? 0) + (stats?.totalNeeds ?? 0)}</div>
+          <div style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Proje + İhtiyaç</div>
+        </div>
+        <Link to="/admin" style={{ textDecoration: 'none' }}>
+          <div className="card" style={{ textAlign: 'center', border: pendingTotal > 0 ? '2px solid var(--coral)' : '1px solid var(--border)', cursor: 'pointer' }}>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '2rem', color: pendingTotal > 0 ? 'var(--coral)' : 'var(--muted)' }}>{pendingTotal}</div>
+            <div style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Onay Bekleyen</div>
+            {pendingTotal > 0 && <div style={{ fontSize: '.75rem', color: 'var(--coral)', marginTop: '.25rem' }}>Panele git →</div>}
+          </div>
+        </Link>
+      </div>
+
+      {/* Hızlı erişim */}
+      <div className="grid-4" style={{ marginBottom: '2rem' }}>
+        {[
+          { to: '/admin', label: '⏳ Onay Bekleyenler', color: 'var(--coral)' },
+          { to: '/admin', label: '👥 Kullanıcılar', color: 'var(--accent)' },
+          { to: '/admin', label: '🚩 Şikayetler', color: 'var(--amber)' },
+          { to: '/admin', label: '📊 Tüm İlanlar', color: 'var(--teal)' },
+        ].map((item) => (
+          <Link key={item.label} to={item.to} style={{ textDecoration: 'none' }}>
+            <div className="card" style={{ textAlign: 'center', padding: '1rem', cursor: 'pointer' }}>
+              <div style={{ fontWeight: 700, color: item.color, fontSize: '.9rem' }}>{item.label}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Son admin işlemleri */}
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700 }}>Son İşlemler</h3>
+          <Link to="/admin" className="btn btn-secondary btn-sm">Admin Paneli →</Link>
+        </div>
+        {logs.length === 0 ? (
+          <p style={{ color: 'var(--muted)', fontSize: '.875rem' }}>Henüz işlem yapılmamış.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+            {logs.slice(0, 8).map((log) => {
+              const admin = log.admin || {};
+              return (
+                <div key={log._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.6rem .75rem', background: 'var(--bg)', borderRadius: '.5rem', border: '1px solid var(--border)', gap: '1rem' }}>
+                  <div style={{ fontSize: '.85rem' }}>
+                    <span style={{ fontWeight: 600 }}>{actionLabels[log.action] || log.action}</span>
+                    {log.details?.title && <span style={{ color: 'var(--muted)', marginLeft: '.5rem' }}>— {log.details.title}</span>}
+                    {log.details?.email && <span style={{ color: 'var(--muted)', marginLeft: '.5rem' }}>— {log.details.email}</span>}
+                  </div>
+                  <div style={{ fontSize: '.75rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                    {new Date(log.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
+
   const [summary, setSummary] = useState(null);
   const [progress, setProgress] = useState([]);
   const [myServices, setMyServices] = useState([]);
@@ -13,6 +121,7 @@ export default function Dashboard() {
   const [aiLoading, setAiLoading] = useState(true);
 
   useEffect(() => {
+    if (isAdmin) return;
     dashboardAPI.summary().then((r) => setSummary(r.data)).catch(() => {});
     dashboardAPI.progress().then((r) => setProgress(r.data)).catch(() => {});
     servicesAPI.mine().then((r) => setMyServices(r.data)).catch(() => {});
@@ -21,7 +130,9 @@ export default function Dashboard() {
       .then((r) => setAiRecs(Array.isArray(r.data) ? r.data.slice(0, 3) : []))
       .catch(() => {})
       .finally(() => setAiLoading(false));
-  }, []);
+  }, [isAdmin]);
+
+  if (isAdmin) return <AdminDashboard user={user} />;
 
   const kpis = [
     { label: 'Aktif Hizmetlerim', value: summary?.services ?? '—', color: 'var(--accent)', link: '/market' },

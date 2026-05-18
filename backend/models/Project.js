@@ -20,6 +20,8 @@ const projectSchema = new mongoose.Schema({
   projectUrl: { type: String, default: '' },
   isRemote: { type: Boolean, default: true },
   applicationDeadline: { type: Date },
+  isApproved: { type: Boolean, default: false },
+  rejectionReason: { type: String, default: '' },
   members: [{
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     role: { type: String, default: 'Üye' },

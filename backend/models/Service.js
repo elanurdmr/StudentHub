@@ -10,6 +10,8 @@ const serviceSchema = new mongoose.Schema({
   tags: [{ type: String }],
   image: { type: String, default: '' },
   isActive: { type: Boolean, default: true },
+  isApproved: { type: Boolean, default: false },
+  rejectionReason: { type: String, default: '' },
   purchaseCount: { type: Number, default: 0 },
   rating: { type: Number, default: 0 },
   reviewCount: { type: Number, default: 0 },

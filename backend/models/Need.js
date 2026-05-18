@@ -9,6 +9,8 @@ const needSchema = new mongoose.Schema({
   deadline: { type: Date },
   tags: [{ type: String }],
   status: { type: String, enum: ['open', 'in_progress', 'closed'], default: 'open' },
+  isApproved: { type: Boolean, default: false },
+  rejectionReason: { type: String, default: '' },
 }, { timestamps: true });
 
 export default mongoose.model('Need', needSchema);

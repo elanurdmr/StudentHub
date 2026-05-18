@@ -389,6 +389,15 @@ export const adminAPI = {
     try { return await api.delete(`/admin/needs/${id}`); }
     catch { return { data: { message: 'Silindi' } }; }
   },
+  pending: () => api.get('/admin/pending'),
+  approve: (type, id) => api.patch(`/admin/approve/${type}/${id}`),
+  reject: (type, id, reason) => api.patch(`/admin/reject/${type}/${id}`, { reason }),
+  stats: () => api.get('/admin/stats'),
+  logs: () => api.get('/admin/logs'),
+  categoryStats: () => api.get('/admin/category-stats'),
+  topUsers: () => api.get('/admin/top-users'),
+  userDetail: (id) => api.get(`/admin/users/${id}/detail`),
+  announce: (title, body) => api.post('/admin/announce', { title, body }),
 };
 
 /* ── AI ── */
@@ -419,6 +428,7 @@ export const reportsAPI = {
     catch { return { data: { message: 'Şikayet alındı' } }; }
   },
   adminList: (params) => tryOrMock(() => api.get('/reports/admin', { params }), MOCK_REPORTS),
+  updateStatus: (id, status, adminNote = '') => api.patch(`/reports/${id}`, { status, adminNote }),
 };
 
 /* ── Skills ── */

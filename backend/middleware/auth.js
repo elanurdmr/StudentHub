@@ -9,10 +9,13 @@ export async function verifyToken(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const hash = crypto.createHash('sha256').update(token).digest('hex');
     const blacklisted = await TokenBlacklist.findOne({ tokenHash: hash });
-    if (blacklisted) return res.status(401).json({ error: 'Token geçersiz kılındı' });
+    if (blacklisted) return res.status(401).json({ error: 'Token geçersiz kılındı', code: 'TOKEN_BLACKLISTED' });
     req.user = decoded;
     next();
-  } catch {
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token süresi doldu', code: 'TOKEN_EXPIRED' });
+    }
     res.status(401).json({ error: 'Geçersiz token' });
   }
 }

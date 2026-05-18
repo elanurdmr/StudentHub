@@ -7,6 +7,8 @@ const schema = new mongoose.Schema(
     contentId: { type: mongoose.Schema.Types.ObjectId, required: true },
     reason: { type: String, required: true },
     status: { type: String, enum: ['pending', 'reviewed', 'dismissed'], default: 'pending' },
+    adminNote: { type: String, default: '' },
+    reviewedAt: { type: Date },
   },
   { timestamps: true }
 );
