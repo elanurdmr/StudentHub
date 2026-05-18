@@ -16,7 +16,11 @@ const SKILL_ALIASES = {
 const LEVEL_WEIGHTS = { beginner: 0.6, intermediate: 1.0, expert: 1.5 };
 
 function normalizeSkill(skill) {
-  const lower = skill.toLowerCase().trim();
+  const lower = String(skill || '')
+    .normalize('NFD')              // İ → I + combining dot → sonra strip edilir
+    .replace(/[̀-ͯ]/g, '') // birleşik karakterleri temizle
+    .toLowerCase()
+    .trim();
   return SKILL_ALIASES[lower] || lower;
 }
 
