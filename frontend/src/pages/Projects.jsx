@@ -13,8 +13,7 @@ export default function Projects() {
   const [category, setCategory] = useState('');
   const [q, setQ] = useState('');
   const [filters, setFilters] = useState({});
-  const [recs, setRecs] = useState([]);
-  const [aiExtra, setAiExtra] = useState([]);
+  const [aiMatches, setAiMatches] = useState([]);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiRan, setAiRan] = useState(false);
 
@@ -33,49 +32,48 @@ export default function Projects() {
       .finally(() => setLoading(false));
   }, [category, q, filters]);
 
-  useEffect(() => {
-    if (!token) {
-      setRecs([]);
-      return;
-    }
-    projectsAPI.recommendations().then((r) => setRecs(r.data)).catch(() => setRecs([]));
-  }, [token]);
-
   async function loadAiMatches() {
     if (!token) return;
     setAiBusy(true);
-    setAiExtra([]);
+    setAiMatches([]);
     setAiRan(false);
     try {
       const { data } = await aiAPI.matchProjects();
       const flat = Array.isArray(data)
         ? data
             .map((row) => {
-              if (row.project && row.project._id) {
-                return { ...row.project, aiReason: row.reason, aiMatchScore: row.matchScore };
-              }
+              if (row.project && row.project._id) return { ...row.project, aiReason: row.reason, aiMatchScore: row.matchScore };
               if (row._id) return row;
               return null;
             })
             .filter(Boolean)
         : [];
-      setAiExtra(flat);
+      setAiMatches(flat);
     } catch {
-      setAiExtra([]);
+      setAiMatches([]);
     } finally {
       setAiBusy(false);
       setAiRan(true);
     }
   }
 
+  function clearAi() {
+    setAiMatches([]);
+    setAiRan(false);
+  }
+
+  // AI sonuçlarının ID seti — diğer projelerden çıkarmak için
+  const aiMatchedIds = new Set(aiMatches.map((p) => String(p._id)));
+  const otherProjects = aiRan ? projects.filter((p) => !aiMatchedIds.has(String(p._id))) : projects;
+
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
       <div className="page-header" style={{ textAlign: 'left', paddingTop: '1rem' }}>
         <h1>Proje İlanları</h1>
-        <p style={{ color: 'var(--muted)' }}>Ekip arayan projeler, skill matching ile sana özel öneriler</p>
+        <p style={{ color: 'var(--muted)' }}>Ekip arayan projeler, becerilerine göre AI eşleştirme</p>
       </div>
 
-      {/* Mobil arama — sidebar gizlenince görünür */}
+      {/* Mobil arama */}
       <div className="mobile-search-bar">
         <div className="search-bar">
           <span>🔍</span>
@@ -97,53 +95,93 @@ export default function Projects() {
         />
 
         <main>
-          {token && (
+          {/* ── AI Eşleştir butonu (giriş yapılmışsa) ── */}
+          {token && !aiRan && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '1rem',
+              padding: '.875rem 1.25rem', marginBottom: '1.5rem',
+              borderRadius: 'var(--radius)', border: '1px solid var(--border)',
+              background: 'var(--card)',
+            }}>
+              <span style={{ fontSize: '1.25rem' }}>🤖</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: '.9rem' }}>Sana uygun projeleri bul</div>
+                <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>Becerilerine göre AI ile eşleştir</div>
+              </div>
+              <button
+                className="btn btn-secondary btn-sm"
+                disabled={aiBusy}
+                onClick={loadAiMatches}
+                style={{ flexShrink: 0 }}
+              >
+                {aiBusy ? '⏳ Çalışıyor…' : '✨ Eşleştir'}
+              </button>
+            </div>
+          )}
+
+          {/* ── AI Önerileri bölümü ── */}
+          {aiRan && (
             <section style={{ marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '.75rem', marginBottom: '1rem' }}>
-                <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>
-                  <b> Sana uygun projeler </b>
-                  {aiExtra.length > 0 ? '' : ''}
-                  {recs.length > 0 && aiExtra.length === 0 ? ' (skill eşlemesi veya AI)' : ''}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '.5rem' }}>
+                <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                  🤖 AI Önerileri
+                  {aiMatches.length > 0 && (
+                    <span style={{ fontSize: '.8rem', fontWeight: 400, color: 'var(--muted)', fontFamily: 'inherit' }}>
+                      — {aiMatches.length} eşleşme
+                    </span>
+                  )}
                 </h2>
                 <div style={{ display: 'flex', gap: '.5rem' }}>
-                  {aiExtra.length > 0 && (
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setAiExtra([]); setAiRan(false); }}>
-                      Tüm Projeler
-                    </button>
-                  )}
-                  <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy} onClick={loadAiMatches}>
-                    {aiBusy ? 'Çalışıyor…' : 'Eşleştir'}
+                  <button className="btn btn-secondary btn-sm" disabled={aiBusy} onClick={loadAiMatches}>
+                    {aiBusy ? '⏳ Çalışıyor…' : '↻ Yenile'}
                   </button>
+                  <button className="btn btn-ghost btn-sm" onClick={clearAi}>✕ Kapat</button>
                 </div>
               </div>
-              {(aiExtra.length > 0 ? aiExtra : recs).length === 0 ? (
-                <p style={{ fontSize: '.875rem', color: 'var(--muted)' }}>
-                  {aiRan
-                    ? 'AI eşleşme bulamadı. Profilinize beceri ekleyerek daha iyi sonuç alabilirsiniz.'
-                    : 'Becerilerinizle eşleşen projeler için "Eşleştir" butonuna tıklayın.'}
-                </p>
+
+              {aiMatches.length === 0 ? (
+                <div style={{
+                  padding: '1.25rem', borderRadius: 'var(--radius)',
+                  border: '1px dashed var(--border)', background: 'var(--card)',
+                  color: 'var(--muted)', fontSize: '.875rem', textAlign: 'center',
+                }}>
+                  Profilinizle eşleşen proje bulunamadı. Beceri ekleyerek daha iyi sonuç alabilirsiniz.
+                </div>
               ) : (
                 <div className="grid-3">
-                  {(aiExtra.length > 0 ? aiExtra : recs).slice(0, 6).map((p) => (
-                    <ProjectCard key={`rec-${p._id}-${p.aiMatchScore ?? ''}`} project={p} />
+                  {aiMatches.map((p) => (
+                    <ProjectCard key={`ai-${p._id}`} project={p} />
                   ))}
                 </div>
               )}
             </section>
           )}
-          {aiExtra.length === 0 && (loading ? (
-            <div className="empty-state"><p>Yükleniyor…</p></div>
-          ) : projects.length === 0 ? (
-            <div className="empty-state">
-              <div className="icon">🤝</div>
-              <h3>Proje bulunamadı</h3>
-              <p>Farklı filtreler deneyin veya kendi projenizi oluşturun</p>
-            </div>
-          ) : (
-            <div className="grid-3">
-              {projects.map((p) => <ProjectCard key={p._id} project={p} />)}
-            </div>
-          ))}
+
+          {/* ── Diğer / Tüm Projeler ── */}
+          <div>
+            {aiRan && otherProjects.length > 0 && (
+              <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem', marginBottom: '1rem' }}>
+                Diğer Projeler
+              </h2>
+            )}
+            {loading ? (
+              <div className="empty-state"><p>Yükleniyor…</p></div>
+            ) : otherProjects.length === 0 && aiRan ? (
+              <p style={{ color: 'var(--muted)', fontSize: '.875rem' }}>
+                Tüm projeler yukarıda AI önerileri olarak gösteriliyor.
+              </p>
+            ) : otherProjects.length === 0 ? (
+              <div className="empty-state">
+                <div className="icon">🤝</div>
+                <h3>Proje bulunamadı</h3>
+                <p>Farklı filtreler deneyin veya kendi projenizi oluşturun</p>
+              </div>
+            ) : (
+              <div className="grid-3">
+                {otherProjects.map((p) => <ProjectCard key={p._id} project={p} />)}
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>

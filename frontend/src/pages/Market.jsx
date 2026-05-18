@@ -3,18 +3,22 @@ import { servicesAPI } from '../api/client.js';
 import ServiceCard from '../components/cards/ServiceCard.jsx';
 import FilterSidebar from '../components/forms/FilterSidebar.jsx';
 
-const CATEGORIES = ['Tasarım', 'Yazılım', 'Akademik', 'Çeviri', 'Fotoğraf', 'Video', 'Müzik', 'Diğer'];
+const CATEGORIES = ['Tasarım', 'Yazılım', 'Akademik', 'Çeviri', 'Fotoğraf', 'Video', 'Müzik', 'Araştırma', 'Sosyal Girişim', 'Oyun', 'Mobil', 'Yapay Zeka', 'Diğer'];
+
+const PAGE_SIZE = 20;
 
 export default function Market() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [category, setCategory] = useState('');
   const [q, setQ] = useState('');
   const [filters, setFilters] = useState({});
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    servicesAPI.list({
+  function buildParams(p) {
+    return {
       category: category || undefined,
       q: q || undefined,
       sort: filters.sort || undefined,
@@ -25,11 +29,42 @@ export default function Market() {
       dateFrom: filters.dateFrom || undefined,
       dateTo: filters.dateTo || undefined,
       skills: filters.skills || undefined,
-    })
-      .then((r) => setServices(r.data?.data || r.data || []))
+      page: p,
+      limit: PAGE_SIZE,
+    };
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    setPage(1);
+    servicesAPI.list(buildParams(1))
+      .then((r) => {
+        const data = r.data?.data || r.data || [];
+        const total = r.data?.pagination?.total ?? data.length;
+        setServices(data);
+        setHasMore(data.length < total);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [category, q, filters]);
+
+  async function loadMore() {
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    try {
+      const r = await servicesAPI.list(buildParams(nextPage));
+      const data = r.data?.data || r.data || [];
+      const total = r.data?.pagination?.total ?? 0;
+      setServices((prev) => {
+        const merged = [...prev, ...data];
+        setHasMore(merged.length < total);
+        return merged;
+      });
+      setPage(nextPage);
+    } catch { /* skip */ } finally {
+      setLoadingMore(false);
+    }
+  }
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
@@ -71,9 +106,22 @@ export default function Market() {
               <p>Farklı filtreler deneyin</p>
             </div>
           ) : (
-            <div className="grid-3">
-              {services.map((s) => <ServiceCard key={s._id} service={s} />)}
-            </div>
+            <>
+              <div className="grid-3">
+                {services.map((s) => <ServiceCard key={s._id} service={s} />)}
+              </div>
+              {hasMore && (
+                <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? 'Yükleniyor…' : 'Daha Fazla Göster'}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
