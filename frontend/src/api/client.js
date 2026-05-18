@@ -62,8 +62,11 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      useAuthStore.getState().logout();
-      window.location.href = '/auth';
+      // Login/register sayfasındayken yönlendirme yapma
+      if (!window.location.pathname.startsWith('/auth')) {
+        useAuthStore.getState().logout();
+        window.location.href = '/auth';
+      }
     }
 
     return Promise.reject(error);
@@ -93,11 +96,7 @@ export const authAPI = {
     }
   },
   login: async (data) => {
-    try {
-      return await api.post('/auth/login', data);
-    } catch {
-      return { data: mockLogin() };
-    }
+    return await api.post('/auth/login', data);
   },
   me: () => tryOrMock(() => api.get('/auth/me'), MOCK_USER),
   refresh: () => api.post('/auth/refresh'),

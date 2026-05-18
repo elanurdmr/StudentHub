@@ -31,6 +31,7 @@ export default function Auth() {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
+  const [apiErrorCode, setApiErrorCode] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, token } = useAuthStore();
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ export default function Auth() {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
     setErrors((er) => ({ ...er, [e.target.name]: '' }));
     setApiError('');
+    setApiErrorCode('');
   }
 
   const [forgotMode, setForgotMode] = useState(false);
@@ -58,6 +60,7 @@ export default function Auth() {
       navigate('/dashboard');
     } catch (err) {
       setApiError(err.response?.data?.error || 'Giriş başarısız');
+      setApiErrorCode(err.response?.data?.code || '');
     } finally {
       setLoading(false);
     }
@@ -126,6 +129,28 @@ export default function Auth() {
           {apiError && (
             <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '.5rem', padding: '.75rem 1rem', marginBottom: '1rem', color: 'var(--coral)', fontSize: '.9rem' }}>
               {apiError}
+              {apiErrorCode === 'EMAIL_NOT_FOUND' && (
+                <div style={{ marginTop: '.5rem' }}>
+                  <button
+                    type="button"
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', fontSize: '.875rem', padding: 0 }}
+                    onClick={() => { setTab('register'); setApiError(''); setApiErrorCode(''); setForm((f) => ({ ...f, email: form.email })); }}
+                  >
+                    Kayıt ol →
+                  </button>
+                </div>
+              )}
+              {apiErrorCode === 'WRONG_PASSWORD' && (
+                <div style={{ marginTop: '.5rem' }}>
+                  <button
+                    type="button"
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', fontSize: '.875rem', padding: 0 }}
+                    onClick={() => { setForgotMode(true); setApiError(''); setApiErrorCode(''); setForgotEmail(form.email); }}
+                  >
+                    Şifremi unuttum →
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

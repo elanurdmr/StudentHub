@@ -85,9 +85,13 @@ router.post(
     if (lockMsg) throw new AppError(lockMsg, 429, 'RATE_LIMITED');
 
     const user = await User.findOne({ email });
-    if (!user || !(await user.comparePassword(password))) {
+    if (!user) {
       recordFailure(email);
-      throw new AppError('E-posta veya şifre hatalı', 401, 'INVALID_CREDENTIALS');
+      throw new AppError('Bu e-posta adresi kayıtlı değil', 401, 'EMAIL_NOT_FOUND');
+    }
+    if (!(await user.comparePassword(password))) {
+      recordFailure(email);
+      throw new AppError('Şifrenizi kontrol edin', 401, 'WRONG_PASSWORD');
     }
     if (user.isBanned) throw new AppError('Hesabınız askıya alınmıştır', 403, 'BANNED');
 
