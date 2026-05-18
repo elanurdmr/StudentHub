@@ -125,6 +125,7 @@ router.get('/category-stats', asyncHandler(async (req, res) => {
 router.get('/top-users', asyncHandler(async (req, res) => {
   const [byServices, byProjects] = await Promise.all([
     Service.aggregate([
+      { $match: { isApproved: true } },
       { $group: { _id: '$owner', count: { $sum: 1 } } },
       { $sort: { count: -1 } }, { $limit: 5 },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
@@ -132,6 +133,7 @@ router.get('/top-users', asyncHandler(async (req, res) => {
       { $project: { count: 1, 'user.firstName': 1, 'user.lastName': 1, 'user.email': 1, 'user.avatar': 1, 'user.isBanned': 1 } },
     ]),
     Project.aggregate([
+      { $match: { isApproved: true } },
       { $group: { _id: '$owner', count: { $sum: 1 } } },
       { $sort: { count: -1 } }, { $limit: 5 },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
