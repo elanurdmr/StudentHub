@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import mongoose from 'mongoose';
 import Service from '../models/Service.js';
 import Project from '../models/Project.js';
 import Application from '../models/Application.js';
@@ -25,7 +26,7 @@ router.get('/projects/progress', verifyToken, asyncHandler(async (req, res) => {
 }));
 
 router.get('/stats', verifyToken, asyncHandler(async (req, res) => {
-  const uid = req.user.id;
+  const uid = new mongoose.Types.ObjectId(req.user.id);
   const [salesAgg, purchaseAgg, totalSalesOrders, purchasesList, acceptedApps] = await Promise.all([
     ServiceOrder.aggregate([
       { $match: { seller: uid, status: 'completed' } },
@@ -35,8 +36,8 @@ router.get('/stats', verifyToken, asyncHandler(async (req, res) => {
       { $match: { buyer: uid, status: 'completed' } },
       { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
     ]),
-    ServiceOrder.countDocuments({ seller: uid }),
-    ServiceOrder.find({ buyer: uid }).sort({ createdAt: -1 }).limit(10)
+    ServiceOrder.countDocuments({ seller: req.user.id }),
+    ServiceOrder.find({ buyer: req.user.id }).sort({ createdAt: -1 }).limit(10)
       .populate('service', 'title price image')
       .populate('seller', 'firstName lastName avatar'),
     Application.find({ applicant: uid, status: 'accepted' }).sort({ updatedAt: -1 }).limit(15)

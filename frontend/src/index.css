@@ -379,3 +379,8 @@ select.form-control { appearance: none; background-image: url("data:image/svg+xm
 .dark .stats-strip { background: #0f172a !important; }
 .dark .type-btn-selected { background: #1e1b4b !important; }
 .dark .feature-icon { background: rgba(255,255,255,0.08) !important; filter: none; }
+.dark .landing-hero { background: linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%) !important; }
+.dark .landing-hero-title { color: #f1f5f9; }
+.dark .landing-hero p { color: #94a3b8; }
+.dark .feature-icon-wrap { background: rgba(255,255,255,0.10) !important; }
+.dark .auth-page { background: linear-gradient(135deg,#1e1b4b 0%,#2e1065 100%) !important; }

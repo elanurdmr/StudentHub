@@ -67,7 +67,7 @@ export default function ProjectCard({ project }) {
             border: '1px solid rgba(79,70,229,.18)',
           }}>
             <div style={{ fontSize: '.7rem', color: 'var(--accent)', fontWeight: 700, marginBottom: '.2rem', textTransform: 'uppercase', letterSpacing: '.03em' }}>
-              AI Önerisi{project.aiMatchScore != null ? ` · ${project.aiMatchScore}%` : ''}
+              AI Önerisi{project.aiMatchScore > 0 ? ` · %${project.aiMatchScore}` : ''}
             </div>
             <p style={{ fontSize: '.8rem', color: 'var(--ink)', margin: 0, lineHeight: 1.4 }}>{project.aiReason}</p>
           </div>

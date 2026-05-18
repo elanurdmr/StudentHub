@@ -90,6 +90,7 @@ userSchema.methods.comparePassword = function (plain) {
 userSchema.methods.toPublic = function () {
   const obj = this.toObject();
   delete obj.password;
+  obj._id = String(obj._id);
   return obj;
 };
 

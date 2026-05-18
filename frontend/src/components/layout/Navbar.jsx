@@ -68,7 +68,7 @@ export default function Navbar() {
               🔔
               {unread > 0 && <span className="notif-dot" />}
             </Link>
-            <Link to={`/profile/${user._id}`}>
+            <Link to={`/profile/${user._id || user.id}`}>
               <div className="avatar av-indigo" style={{ width: '2rem', height: '2rem', fontSize: '.8rem' }}>
                 {user.avatar ? <img src={user.avatar} alt="" /> : initials}
               </div>

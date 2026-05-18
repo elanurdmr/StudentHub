@@ -19,7 +19,7 @@ export default function Create() {
   const isEdit   = !!(editType && editId);
 
   const [type, setType] = useState(editType || 'service');
-  const [form, setForm] = useState({ title: '', description: '', category: '', price: '', budget: '', deliveryDays: '', teamSize: '', duration: '', requiredSkills: '', collaborationType: 'volunteer', expectedTimeCommitment: '', isRemote: true, applicationDeadline: '', projectUrl: '' });
+  const [form, setForm] = useState({ title: '', description: '', category: '', price: '', budget: '', deliveryDays: '', teamSize: '', duration: '', requiredSkills: '', collaborationType: 'volunteer', expectedTimeCommitment: '', isRemote: true, applicationDeadline: '', projectUrl: '', status: 'recruiting' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [serviceImage, setServiceImage] = useState('');
@@ -47,6 +47,7 @@ export default function Create() {
         isRemote: data.isRemote !== false,
         applicationDeadline: data.applicationDeadline ? data.applicationDeadline.slice(0, 10) : '',
         projectUrl: data.projectUrl || '',
+        status: data.status || 'recruiting',
       });
       if (editType === 'service' && data.image) setServiceImage(data.image);
     }).catch(() => {});
@@ -56,9 +57,14 @@ export default function Create() {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   }
 
+  const today = new Date().toISOString().slice(0, 10);
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.title || !form.description || !form.category) { setError('Başlık, açıklama ve kategori zorunludur'); return; }
+    if (type === 'project' && form.applicationDeadline && form.applicationDeadline < today) {
+      setError('Başvuru son tarihi bugünden önce olamaz'); return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -85,6 +91,7 @@ export default function Create() {
           teamSize: Number(form.teamSize) || 3, duration: form.duration, requiredSkills: skills,
           collaborationType: form.collaborationType, expectedTimeCommitment: form.expectedTimeCommitment,
           isRemote: form.isRemote,
+          ...(isEdit ? { status: form.status } : {}),
           ...(form.applicationDeadline ? { applicationDeadline: form.applicationDeadline } : {}),
           ...(form.projectUrl ? { projectUrl: form.projectUrl } : {}),
         };
@@ -219,7 +226,7 @@ export default function Create() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label">Başvuru Son Tarihi</label>
-                  <input className="form-control" name="applicationDeadline" type="date" value={form.applicationDeadline} onChange={handleChange} />
+                  <input className="form-control" name="applicationDeadline" type="date" value={form.applicationDeadline} onChange={handleChange} min={today} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Çalışma Şekli</label>
@@ -237,6 +244,16 @@ export default function Create() {
                 <label className="form-label">Proje URL (isteğe bağlı)</label>
                 <input className="form-control" name="projectUrl" type="url" value={form.projectUrl} onChange={handleChange} placeholder="https://github.com/..." />
               </div>
+              {isEdit && (
+                <div className="form-group">
+                  <label className="form-label">Proje Durumu</label>
+                  <select className="form-control" name="status" value={form.status} onChange={handleChange}>
+                    <option value="recruiting">Ekip Arıyor</option>
+                    <option value="active">Aktif</option>
+                    <option value="completed">Tamamlandı</option>
+                  </select>
+                </div>
+              )}
             </>
           )}
 

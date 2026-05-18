@@ -16,6 +16,7 @@ export default function Projects() {
   const [recs, setRecs] = useState([]);
   const [aiExtra, setAiExtra] = useState([]);
   const [aiBusy, setAiBusy] = useState(false);
+  const [aiRan, setAiRan] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -44,6 +45,7 @@ export default function Projects() {
     if (!token) return;
     setAiBusy(true);
     setAiExtra([]);
+    setAiRan(false);
     try {
       const { data } = await aiAPI.matchProjects();
       const flat = Array.isArray(data)
@@ -62,6 +64,7 @@ export default function Projects() {
       setAiExtra([]);
     } finally {
       setAiBusy(false);
+      setAiRan(true);
     }
   }
 
@@ -102,13 +105,22 @@ export default function Projects() {
                   {aiExtra.length > 0 ? '' : ''}
                   {recs.length > 0 && aiExtra.length === 0 ? ' (skill eşlemesi veya AI)' : ''}
                 </h2>
-                <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy} onClick={loadAiMatches}>
-                  {aiBusy ? 'Çalışıyor…' : 'Eşleştir'}
-                </button>
+                <div style={{ display: 'flex', gap: '.5rem' }}>
+                  {aiExtra.length > 0 && (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setAiExtra([]); setAiRan(false); }}>
+                      Tüm Projeler
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy} onClick={loadAiMatches}>
+                    {aiBusy ? 'Çalışıyor…' : 'Eşleştir'}
+                  </button>
+                </div>
               </div>
               {(aiExtra.length > 0 ? aiExtra : recs).length === 0 ? (
                 <p style={{ fontSize: '.875rem', color: 'var(--muted)' }}>
-                  Henüz öneri yok. Becerilerinizi profilden ekleyin veya yukarıdan Gemini ile deneyin (API anahtarı gerekir).
+                  {aiRan
+                    ? 'AI eşleşme bulamadı. Profilinize beceri ekleyerek daha iyi sonuç alabilirsiniz.'
+                    : 'Becerilerinizle eşleşen projeler için "Eşleştir" butonuna tıklayın.'}
                 </p>
               ) : (
                 <div className="grid-3">
@@ -119,7 +131,7 @@ export default function Projects() {
               )}
             </section>
           )}
-          {loading ? (
+          {aiExtra.length === 0 && (loading ? (
             <div className="empty-state"><p>Yükleniyor…</p></div>
           ) : projects.length === 0 ? (
             <div className="empty-state">
@@ -131,7 +143,7 @@ export default function Projects() {
             <div className="grid-3">
               {projects.map((p) => <ProjectCard key={p._id} project={p} />)}
             </div>
-          )}
+          ))}
         </main>
       </div>
     </div>

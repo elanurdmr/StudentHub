@@ -18,6 +18,8 @@ export default function Detail() {
   const [isNarrow, setIsNarrow] = useState(window.innerWidth < 768);
   const [reported, setReported] = useState(false);
   const [paymentIntent, setPaymentIntent] = useState(null);
+  const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', name: '' });
+  const [cardErrors, setCardErrors] = useState({});
 
   useEffect(() => {
     const handleResize = () => setIsNarrow(window.innerWidth < 768);
@@ -47,13 +49,48 @@ export default function Detail() {
     } finally { setActionLoading(false); }
   }
 
+  function formatCardNumber(val) {
+    return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+  }
+  function formatExpiry(val) {
+    const digits = val.replace(/\D/g, '').slice(0, 4);
+    return digits.length > 2 ? digits.slice(0, 2) + '/' + digits.slice(2) : digits;
+  }
+  function handleCardChange(e) {
+    const { name, value } = e.target;
+    let formatted = value;
+    if (name === 'number') formatted = formatCardNumber(value);
+    if (name === 'expiry') formatted = formatExpiry(value);
+    if (name === 'cvv') formatted = value.replace(/\D/g, '').slice(0, 4);
+    setCardForm((f) => ({ ...f, [name]: formatted }));
+    setCardErrors((er) => ({ ...er, [name]: '' }));
+  }
+  function validateCard() {
+    const errs = {};
+    const digits = cardForm.number.replace(/\s/g, '');
+    if (digits.length < 16) errs.number = 'Geçerli bir kart numarası girin';
+    if (!/^\d{2}\/\d{2}$/.test(cardForm.expiry)) errs.expiry = 'AA/YY formatında girin';
+    else {
+      const [mm, yy] = cardForm.expiry.split('/').map(Number);
+      const now = new Date();
+      const exp = new Date(2000 + yy, mm - 1);
+      if (mm < 1 || mm > 12 || exp < now) errs.expiry = 'Kartın süresi dolmuş';
+    }
+    if (cardForm.cvv.length < 3) errs.cvv = 'CVV 3-4 haneli olmalı';
+    if (!cardForm.name.trim()) errs.name = 'Kart üzerindeki isim zorunlu';
+    return errs;
+  }
+
   async function handleConfirmPayment() {
     if (!paymentIntent) return;
+    const errs = validateCard();
+    if (Object.keys(errs).length) { setCardErrors(errs); return; }
     setActionLoading(true);
     try {
       await servicesAPI.confirmPayment(id, paymentIntent.paymentIntentId);
       setModal(null);
       setPaymentIntent(null);
+      setCardForm({ number: '', expiry: '', cvv: '', name: '' });
       alert('Ödeme başarılı! Satın alma tamamlandı.');
     } catch (err) {
       alert(err.response?.data?.error || 'Ödeme başarısız');
@@ -384,20 +421,55 @@ export default function Detail() {
       </Modal>
 
       {/* Payment modal */}
-      <Modal open={modal === 'payment'} onClose={() => { setModal(null); setPaymentIntent(null); }} title="Ödemeyi Tamamla">
+      <Modal open={modal === 'payment'} onClose={() => { setModal(null); setPaymentIntent(null); setCardForm({ number: '', expiry: '', cvv: '', name: '' }); setCardErrors({}); }} title="Ödemeyi Tamamla">
         {paymentIntent && (
           <div>
-            <div style={{ background: '#f8fafc', borderRadius: '.75rem', padding: '1.25rem', marginBottom: '1.25rem' }}>
-              <div style={{ fontSize: '.85rem', color: 'var(--muted)', marginBottom: '.25rem' }}>Hizmet</div>
-              <div style={{ fontWeight: 700, marginBottom: '.75rem' }}>{paymentIntent.serviceName}</div>
-              <div style={{ fontSize: '.85rem', color: 'var(--muted)', marginBottom: '.25rem' }}>Toplam Tutar</div>
-              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.75rem', color: 'var(--accent)' }}>₺{paymentIntent.amount}</div>
+            {/* Özet */}
+            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '.75rem', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '.75rem', color: 'var(--muted)', marginBottom: '.2rem' }}>Satın alınan hizmet</div>
+                <div style={{ fontWeight: 700, fontSize: '.95rem' }}>{paymentIntent.serviceName}</div>
+              </div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.5rem', color: 'var(--accent)' }}>₺{paymentIntent.amount}</div>
             </div>
-            <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '.35rem' }}>
-              🔒 Güvenli ödeme · Mock payment demo
+
+            {/* Kart formu */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.85rem' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Kart Üzerindeki İsim</label>
+                <input className={`form-control${cardErrors.name ? ' error' : ''}`} name="name" placeholder="AD SOYAD" value={cardForm.name} onChange={handleCardChange} autoComplete="cc-name" />
+                {cardErrors.name && <p className="form-error">{cardErrors.name}</p>}
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Kart Numarası</label>
+                <div style={{ position: 'relative' }}>
+                  <input className={`form-control${cardErrors.number ? ' error' : ''}`} name="number" placeholder="0000 0000 0000 0000" value={cardForm.number} onChange={handleCardChange} autoComplete="cc-number" inputMode="numeric" style={{ paddingRight: '2.5rem', letterSpacing: '.1em' }} />
+                  <span style={{ position: 'absolute', right: '.75rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1.1rem' }}>💳</span>
+                </div>
+                {cardErrors.number && <p className="form-error">{cardErrors.number}</p>}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Son Kullanma</label>
+                  <input className={`form-control${cardErrors.expiry ? ' error' : ''}`} name="expiry" placeholder="AA/YY" value={cardForm.expiry} onChange={handleCardChange} autoComplete="cc-exp" inputMode="numeric" />
+                  {cardErrors.expiry && <p className="form-error">{cardErrors.expiry}</p>}
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">CVV</label>
+                  <input className={`form-control${cardErrors.cvv ? ' error' : ''}`} name="cvv" placeholder="•••" value={cardForm.cvv} onChange={handleCardChange} autoComplete="cc-csc" inputMode="numeric" type="password" />
+                  {cardErrors.cvv && <p className="form-error">{cardErrors.cvv}</p>}
+                </div>
+              </div>
             </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', fontSize: '.75rem', color: 'var(--muted)', margin: '1.25rem 0 .75rem' }}>
+              🔒 256-bit SSL ile şifrelenmiş güvenli ödeme
+            </div>
+
             <button className="btn btn-primary w-full" disabled={actionLoading} onClick={handleConfirmPayment} style={{ justifyContent: 'center' }}>
-              {actionLoading ? 'İşleniyor…' : '💳 Ödemeyi Onayla'}
+              {actionLoading ? 'İşleniyor…' : `₺${paymentIntent.amount} Öde`}
             </button>
           </div>
         )}

@@ -8,7 +8,7 @@ import OneriLog from '../models/OneriLog.js';
 import SearchHistory from '../models/SearchHistory.js';
 import { verifyToken } from '../middleware/auth.js';
 import { asyncHandler, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
-import { fetchGeminiProjectMatches } from '../services/geminiProjectMatch.js';
+import { fetchGroqProjectMatches } from '../services/groqProjectMatch.js';
 import { getSkillBasedRecommendations } from '../services/skillMatchingService.js';
 import { notifyMatchingUsers } from '../services/opportunityMatcher.js';
 
@@ -63,17 +63,24 @@ router.get('/mine', verifyToken, asyncHandler(async (req, res) => {
   res.json(projects);
 }));
 
+router.get('/my-applications', verifyToken, asyncHandler(async (req, res) => {
+  const apps = await Application.find({ applicant: req.user.id })
+    .populate('project', 'title category _id')
+    .sort({ createdAt: -1 });
+  res.json(apps);
+}));
+
 router.get('/recommendations', verifyToken, asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) throw new NotFoundError('Kullanıcı');
 
-  if (process.env.GEMINI_API_KEY?.trim()) {
+  if (process.env.GROQ_API_KEY?.trim()) {
     try {
-      const ai = await fetchGeminiProjectMatches(req.user.id);
-      if (Array.isArray(ai)) {
+      const ai = await fetchGroqProjectMatches(req.user.id);
+      if (Array.isArray(ai) && ai.length > 0) {
         return res.json(ai.map((row) => ({ ...row.project, aiReason: row.reason, aiMatchScore: row.matchScore })));
       }
-    } catch { /* Gemini hata verirse devam */ }
+    } catch { /* Groq hata verirse devam */ }
   }
 
   const recommendations = await getSkillBasedRecommendations(req.user.id);

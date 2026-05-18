@@ -101,6 +101,7 @@ export const authAPI = {
   },
   me: () => tryOrMock(() => api.get('/auth/me'), MOCK_USER),
   refresh: () => api.post('/auth/refresh'),
+  forgotPassword: (email) => api.post('/auth/request-reset', { email }),
 };
 
 /* ── Users ── */
@@ -185,10 +186,7 @@ export const servicesAPI = {
     try { return await api.post(`/services/${id}/checkout`); }
     catch { return { data: { paymentIntentId: 'pi_mock_' + Date.now(), clientSecret: 'mock_secret', amount: 0, serviceName: 'Mock Hizmet' } }; }
   },
-  confirmPayment: async (id, paymentIntentId) => {
-    try { return await api.post(`/services/${id}/confirm-payment`, { paymentIntentId }); }
-    catch { return { data: { message: 'Ödeme başarılı' } }; }
-  },
+  confirmPayment: (id, paymentIntentId) => api.post(`/services/${id}/confirm-payment`, { paymentIntentId }),
 };
 
 /* ── Needs ── */

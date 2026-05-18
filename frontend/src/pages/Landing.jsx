@@ -17,12 +17,12 @@ export default function Landing() {
   return (
     <div>
       {/* Hero */}
-      <section style={{ background: 'linear-gradient(135deg,#eef2ff 0%,#f5f3ff 50%,#fdf4ff 100%)', padding: '6rem 1.5rem 5rem', textAlign: 'center' }}>
+      <section className="landing-hero" style={{ padding: '6rem 1.5rem 5rem', textAlign: 'center' }}>
         <div style={{ maxWidth: 720, margin: '0 auto' }}>
           <div className="chip chip-indigo" style={{ marginBottom: '1.5rem', display: 'inline-flex' }}>
             Öğrenci Ekonomisi Platformu
           </div>
-          <h1 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(2rem,5vw,3.5rem)', lineHeight: 1.15, marginBottom: '1.5rem' }}>
+          <h1 className="landing-hero-title" style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(2rem,5vw,3.5rem)', lineHeight: 1.15, marginBottom: '1.5rem' }}>
             Becerini sat, <span style={{ color: 'var(--accent)' }}>ekip kur</span>, ilerle
           </h1>
           <p style={{ fontSize: '1.15rem', color: 'var(--muted)', marginBottom: '2.5rem', lineHeight: 1.7 }}>
@@ -58,7 +58,7 @@ export default function Landing() {
             {features.map((f) => (
               <Link to={f.link} key={f.title} style={{ textDecoration: 'none' }}>
                 <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
-                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: f.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', margin: '0 auto 1.25rem' }}>
+                  <div className="feature-icon-wrap" style={{ width: 64, height: 64, borderRadius: '50%', background: f.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', margin: '0 auto 1.25rem' }}>
                     {f.icon}
                   </div>
                   <h3 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '.75rem', color: f.accent }}>{f.title}</h3>

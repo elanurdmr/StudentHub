@@ -46,7 +46,8 @@ export default function Profile() {
   const [cvLoading, setCvLoading]         = useState(false);
 
   const fileRef = useRef();
-  const isMe    = me?._id === id;
+  const meId    = me ? (String(me._id || me.id || '')).replace(/^undefined$/, '') : '';
+  const isMe    = !!(meId && meId === id);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
