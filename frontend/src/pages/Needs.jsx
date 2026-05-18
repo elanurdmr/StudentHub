@@ -3,21 +3,27 @@ import { needsAPI } from '../api/client.js';
 import NeedCard from '../components/cards/NeedCard.jsx';
 import FilterSidebar from '../components/forms/FilterSidebar.jsx';
 
-const CATEGORIES = ['Tasarım', 'Yazılım', 'Akademik', 'Çeviri', 'Fotoğraf', 'Video', 'Müzik', 'Diğer'];
+const CATEGORIES = ['Tasarım', 'Yazılım', 'Akademik', 'Çeviri', 'Fotoğraf', 'Video', 'Müzik', 'Araştırma', 'Sosyal Girişim', 'Mobil', 'Yapay Zeka', 'Diğer'];
+const PAGE_SIZE = 20;
 
 export default function Needs() {
-  const [needs, setNeeds] = useState([]);
+  const [allNeeds, setAllNeeds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
   const [q, setQ] = useState('');
+  const [visible, setVisible] = useState(PAGE_SIZE);
 
   useEffect(() => {
     setLoading(true);
+    setVisible(PAGE_SIZE);
     needsAPI.list({ category: category || undefined, q: q || undefined })
-      .then((r) => setNeeds(r.data))
+      .then((r) => setAllNeeds(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [category, q]);
+
+  const needs = allNeeds.slice(0, visible);
+  const hasMore = visible < allNeeds.length;
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
@@ -35,7 +41,13 @@ export default function Needs() {
       </div>
 
       <div className="layout-with-sidebar">
-        <FilterSidebar categories={CATEGORIES} selected={category} onSelect={setCategory} onSearch={setQ} searchPlaceholder="İhtiyaç ara..." />
+        <FilterSidebar
+          categories={CATEGORIES}
+          selected={category}
+          onSelect={setCategory}
+          onSearch={setQ}
+          searchPlaceholder="İhtiyaç ara..."
+        />
 
         <main>
           {loading ? (
@@ -47,9 +59,21 @@ export default function Needs() {
               <p>Farklı filtreler deneyin</p>
             </div>
           ) : (
-            <div className="grid-3">
-              {needs.map((n) => <NeedCard key={n._id} need={n} />)}
-            </div>
+            <>
+              <div className="grid-3">
+                {needs.map((n) => <NeedCard key={n._id} need={n} />)}
+              </div>
+              {hasMore && (
+                <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setVisible((v) => v + PAGE_SIZE)}
+                  >
+                    Daha Fazla Göster
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
