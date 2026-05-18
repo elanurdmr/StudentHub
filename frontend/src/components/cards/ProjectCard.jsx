@@ -29,15 +29,24 @@ export default function ProjectCard({ project }) {
     <Link to={`/detail/project/${project._id}`} style={{ textDecoration: 'none' }}>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '.75rem', height: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <span className={`chip ${statusChip[project.status] || 'chip-slate'}`}>
-            {statusLabel[project.status] || project.status}
-          </span>
+          <div style={{ display: 'flex', gap: '.35rem', flexWrap: 'wrap' }}>
+            <span className={`chip ${statusChip[project.status] || 'chip-slate'}`}>
+              {statusLabel[project.status] || project.status}
+            </span>
+            {project.applicationDeadline && (() => {
+              const days = Math.ceil((new Date(project.applicationDeadline) - new Date()) / 86400000);
+              if (days < 0) return <span className="chip chip-slate">Süre Doldu</span>;
+              if (days <= 3) return <span className="chip chip-coral">Son {days} gün!</span>;
+              if (days <= 7) return <span className="chip chip-amber">Son {days} gün</span>;
+              return null;
+            })()}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem' }}>
             <button
               onClick={toggleFav}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '1.1rem', color: favorited ? '#f43f5e' : '#cbd5e1',
+                fontSize: '1.1rem', color: favorited ? 'var(--coral)' : '#cbd5e1',
                 padding: '0 .25rem', lineHeight: 1,
                 display: token ? 'inline' : 'none',
               }}

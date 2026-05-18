@@ -111,9 +111,9 @@ export const usersAPI = {
     try { return await api.patch(`/users/${id}`, data); }
     catch { return { data: { ...MOCK_USER, ...data } }; }
   },
-  addSkill: async (id, skill) => {
-    try { return await api.post(`/users/${id}/skills`, { skill }); }
-    catch { return { data: { ...MOCK_USER, skills: [...(MOCK_USER.skills || []), { name: skill, level: 'intermediate' }] } }; }
+  addSkill: async (id, skill, level = 'intermediate') => {
+    try { return await api.post(`/users/${id}/skills`, { skill, level }); }
+    catch { return { data: { ...MOCK_USER, skills: [...(MOCK_USER.skills || []), { name: skill, level }] } }; }
   },
   removeSkill: async (id, skill) => {
     try { return await api.delete(`/users/${id}/skills/${skill}`); }
@@ -252,6 +252,7 @@ export const projectsAPI = {
   },
   applications: (id) => tryOrMock(() => api.get(`/projects/${id}/applications`), MOCK_APPLICATIONS),
   myApplications: () => tryOrMock(() => api.get('/projects/my-applications'), MOCK_APPLICATIONS),
+  withdraw: (id) => api.delete(`/projects/my-applications/${id}`),
   updateApplication: async (projectId, appId, status) => {
     try { return await api.patch(`/projects/${projectId}/applications/${appId}`, { status }); }
     catch { return { data: { _id: appId, status } }; }

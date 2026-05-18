@@ -70,6 +70,17 @@ router.get('/my-applications', verifyToken, asyncHandler(async (req, res) => {
   res.json(apps);
 }));
 
+router.delete('/my-applications/:id', verifyToken, asyncHandler(async (req, res) => {
+  const app = await Application.findById(req.params.id);
+  if (!app) throw new NotFoundError('Başvuru');
+  if (app.applicant.toString() !== req.user.id) throw new ForbiddenError();
+  if (app.status !== 'pending')
+    return res.status(400).json({ error: 'Sadece beklemedeki başvurular geri çekilebilir' });
+  await Project.findByIdAndUpdate(app.project, { $inc: { applicationCount: -1 } });
+  await app.deleteOne();
+  res.json({ success: true });
+}));
+
 router.get('/recommendations', verifyToken, asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) throw new NotFoundError('Kullanıcı');
@@ -98,10 +109,16 @@ router.get('/recommendations', verifyToken, asyncHandler(async (req, res) => {
   res.json(projects.map((p) => ({ ...p.toObject(), matchScore: 0 })));
 }));
 
-router.get('/:id', asyncHandler(async (req, res) => {
-  const project = await Project.findById(req.params.id).populate('owner', 'firstName lastName avatar rating bio');
+router.get('/:id', optionalAuth, asyncHandler(async (req, res) => {
+  const project = await Project.findById(req.params.id)
+    .populate('owner', 'firstName lastName avatar rating bio')
+    .populate('members.user', 'firstName lastName avatar');
   if (!project) throw new NotFoundError('Proje');
-  res.json(project);
+  let hasApplied = false;
+  if (req.user) {
+    hasApplied = !!(await Application.findOne({ project: req.params.id, applicant: req.user.id }));
+  }
+  res.json({ ...project.toObject(), hasApplied });
 }));
 
 router.post('/', verifyToken, asyncHandler(async (req, res) => {
@@ -178,6 +195,10 @@ router.patch('/:projectId/applications/:appId', verifyToken, asyncHandler(async 
           status: 'active',
         },
       },
+    });
+
+    await Project.findByIdAndUpdate(req.params.projectId, {
+      $push: { members: { user: app.applicant._id, role: req.body.role || 'Üye', joinedAt: new Date() } },
     });
 
     await Notification.create({

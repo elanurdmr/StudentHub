@@ -49,7 +49,7 @@ export default function Favorites() {
               </div>
               <button
                 onClick={() => removeFav(fav)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#f43f5e' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--coral)' }}
                 title="Favoriden çıkar"
               >
                 ♥

@@ -384,3 +384,9 @@ select.form-control { appearance: none; background-image: url("data:image/svg+xm
 .dark .landing-hero p { color: #94a3b8; }
 .dark .feature-icon-wrap { background: rgba(255,255,255,0.10) !important; }
 .dark .auth-page { background: linear-gradient(135deg,#1e1b4b 0%,#2e1065 100%) !important; }
+
+.dark .btn-secondary { background: #1e1b4b; color: #c7d2fe; border-color: #3730a3; }
+.dark .btn-ghost { color: #a5b4fc; }
+.dark .form-label { color: #94a3b8; }
+.dark .empty-state { background: var(--card); }
+.dark .page-header h1 { color: var(--ink); }

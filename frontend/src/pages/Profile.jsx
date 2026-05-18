@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { usersAPI, reviewsAPI, uploadAPI, servicesAPI, projectsAPI, needsAPI } from '../api/client.js';
+import { usersAPI, reviewsAPI, uploadAPI, servicesAPI, projectsAPI, needsAPI, skillsAPI } from '../api/client.js';
 import useAuthStore from '../store/authStore.js';
 
 const DEGREE_LABELS = { associate: 'Ön Lisans', bachelor: 'Lisans', master: 'Yüksek Lisans', phd: 'Doktora', certificate: 'Sertifika', other: 'Diğer' };
@@ -20,6 +20,9 @@ export default function Profile() {
   const [loading, setLoading]   = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [newSkill, setNewSkill] = useState('');
+  const [skillLevel, setSkillLevel] = useState('intermediate');
+  const [suggestions, setSuggestions] = useState([]);
+  const skillDebounceRef = useRef(null);
   const [editBio, setEditBio]   = useState(false);
   const [bio, setBio]           = useState('');
   const [uploading, setUploading] = useState(false);
@@ -95,12 +98,27 @@ export default function Profile() {
   }
 
   /* ----- Beceri ekle / çıkar ----- */
-  async function addSkill() {
-    if (!newSkill.trim()) return;
-    const { data } = await usersAPI.addSkill(id, newSkill.trim());
+  function handleSkillInput(val) {
+    setNewSkill(val);
+    clearTimeout(skillDebounceRef.current);
+    if (!val.trim()) { setSuggestions([]); return; }
+    skillDebounceRef.current = setTimeout(async () => {
+      try {
+        const { data } = await skillsAPI.search(val);
+        setSuggestions(Array.isArray(data) ? data.slice(0, 6) : []);
+      } catch { setSuggestions([]); }
+    }, 300);
+  }
+
+  async function addSkill(name) {
+    const skillName = name || newSkill.trim();
+    if (!skillName) return;
+    const { data } = await usersAPI.addSkill(id, skillName, skillLevel);
     setProfile(data);
     if (isMe) updateUser(data);
     setNewSkill('');
+    setSkillLevel('intermediate');
+    setSuggestions([]);
   }
 
   async function removeSkill(skill) {
@@ -363,16 +381,49 @@ export default function Profile() {
               })}
             </div>
             {isMe && (
-              <div style={{ display: 'flex', gap: '.5rem' }}>
-                <input
-                  className="form-control"
-                  style={{ fontSize: '.85rem', padding: '.5rem .75rem' }}
-                  placeholder="Beceri ekle"
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addSkill()}
-                />
-                <button className="btn btn-primary btn-sm" onClick={addSkill}>+</button>
+              <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', gap: '.5rem' }}>
+                  <input
+                    className="form-control"
+                    style={{ fontSize: '.85rem', padding: '.5rem .75rem' }}
+                    placeholder="Beceri ekle (örn. React, Python…)"
+                    value={newSkill}
+                    onChange={(e) => handleSkillInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); addSkill(suggestions[0]?.name); }
+                      if (e.key === 'Escape') setSuggestions([]);
+                    }}
+                    onBlur={() => setTimeout(() => setSuggestions([]), 150)}
+                  />
+                  <select
+                    className="form-control"
+                    style={{ fontSize: '.82rem', padding: '.5rem .4rem', width: 'auto', flexShrink: 0 }}
+                    value={skillLevel}
+                    onChange={(e) => setSkillLevel(e.target.value)}
+                  >
+                    <option value="beginner">Başlangıç</option>
+                    <option value="intermediate">Orta</option>
+                    <option value="advanced">İleri</option>
+                  </select>
+                  <button className="btn btn-primary btn-sm" onClick={() => addSkill()}>+</button>
+                </div>
+                {suggestions.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '.5rem', boxShadow: '0 4px 16px rgba(0,0,0,.12)', zIndex: 50, marginTop: '.25rem', overflow: 'hidden' }}>
+                    {suggestions.map((s) => (
+                      <button
+                        key={s._id || s.name}
+                        type="button"
+                        onMouseDown={() => addSkill(s.name)}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '.5rem .75rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '.85rem', color: 'var(--ink)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      >
+                        {s.name}
+                        {s.usageCount > 0 && <span style={{ color: 'var(--muted)', fontSize: '.75rem', marginLeft: '.5rem' }}>{s.usageCount} kullanım</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

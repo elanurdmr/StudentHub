@@ -54,7 +54,7 @@ export default function Notifications() {
                 padding: '1rem 1.25rem',
                 borderRadius: 'var(--radius)',
                 border: `1px solid ${n.isRead ? 'var(--border)' : 'var(--accent)'}`,
-                background: n.isRead ? 'var(--card)' : '#eef2ff',
+                background: n.isRead ? 'var(--card)' : 'rgba(99,102,241,0.08)',
                 cursor: 'pointer',
                 display: 'flex',
                 gap: '1rem',

@@ -17,6 +17,7 @@ export default function Detail() {
   const [error, setError] = useState('');
   const [isNarrow, setIsNarrow] = useState(window.innerWidth < 768);
   const [reported, setReported] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
   const [paymentIntent, setPaymentIntent] = useState(null);
   const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', name: '' });
   const [cardErrors, setCardErrors] = useState({});
@@ -32,7 +33,7 @@ export default function Detail() {
     const api = type === 'service' ? servicesAPI.get(id)
       : type === 'need' ? needsAPI.get(id)
       : projectsAPI.get(id);
-    api.then((r) => setData(r.data)).catch(() => navigate(-1)).finally(() => setLoading(false));
+    api.then((r) => { setData(r.data); if (r.data.hasApplied) setHasApplied(true); }).catch(() => navigate(-1)).finally(() => setLoading(false));
   }, [type, id]);
 
   const owner = data?.owner || {};
@@ -117,6 +118,7 @@ export default function Detail() {
     try {
       await projectsAPI.apply(id, { coverLetter: applyForm.coverLetter });
       setModal(null);
+      setHasApplied(true);
       alert('Başvurunuz alındı!');
     } catch (err) {
       setError(err.response?.data?.error || 'Hata');
@@ -349,6 +351,28 @@ export default function Detail() {
                   <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>Ekip büyüklüğü</div>
                   <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.25rem' }}>{data.teamSize} kişi</div>
                 </div>
+                {data.members?.length > 0 && (
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: '.5rem' }}>Ekip Üyeleri ({data.members.length})</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+                      {data.members.map((m, i) => (
+                        <div key={m.user?._id || i} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.7rem', color: '#fff', fontWeight: 700, flexShrink: 0, overflow: 'hidden' }}>
+                            {m.user?.avatar
+                              ? <img src={m.user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : `${m.user?.firstName?.[0] || '?'}${m.user?.lastName?.[0] || ''}`}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '.82rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {m.user?.firstName} {m.user?.lastName}
+                            </div>
+                            <div style={{ fontSize: '.72rem', color: 'var(--muted)' }}>{m.role || 'Üye'}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {data.duration && (
                   <div style={{ marginBottom: '1.25rem' }}>
                     <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>Süre</div>
@@ -361,9 +385,9 @@ export default function Detail() {
                     <button className="btn btn-secondary w-full" style={{ color: 'var(--coral)' }} onClick={handleDelete}>Sil</button>
                   </div>
                 ) : user ? (
-                  <button className="btn btn-accent2 w-full" style={{ justifyContent: 'center' }} onClick={() => setModal('apply')}>
-                    Başvur
-                  </button>
+                  hasApplied
+                    ? <button className="btn w-full" style={{ justifyContent: 'center', background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--muted)', cursor: 'default' }} disabled>✓ Başvuruldu</button>
+                    : <button className="btn btn-accent2 w-full" style={{ justifyContent: 'center' }} onClick={() => setModal('apply')}>Başvur</button>
                 ) : (
                   <Link to="/auth" className="btn btn-primary w-full" style={{ justifyContent: 'center' }}>Giriş Yap</Link>
                 )}

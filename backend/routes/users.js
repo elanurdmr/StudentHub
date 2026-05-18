@@ -12,6 +12,20 @@ import { asyncHandler, NotFoundError, ForbiddenError } from '../middleware/error
 
 const router = Router();
 
+function calcCompletion(user) {
+  let score = 0;
+  if (user.avatar)                                              score += 10;
+  if (user.bio?.trim())                                         score += 10;
+  if (user.headline?.trim())                                    score += 10;
+  if ((user.skills || []).length >= 1)                          score += 15;
+  if ((user.skills || []).length >= 3)                          score += 10;
+  if ((user.education || []).length >= 1)                       score += 15;
+  if ((user.experience || []).length >= 1)                      score += 15;
+  if ((user.languages || []).length >= 1)                       score += 10;
+  if (Object.values(user.socialLinks || {}).some((v) => v))     score += 5;
+  return Math.min(score, 100);
+}
+
 router.get('/:id', asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id).select('-password');
   if (!user) throw new NotFoundError('Kullanıcı');
@@ -26,6 +40,11 @@ router.patch('/:id', verifyToken, asyncHandler(async (req, res) => {
     { firstName, lastName, bio, avatar, headline, socialLinks, languages },
     { new: true, runValidators: true }
   ).select('-password');
+  const score = calcCompletion(user);
+  if (user.completionScore !== score) {
+    user.completionScore = score;
+    await user.save();
+  }
   res.json(user);
 }));
 
@@ -39,7 +58,8 @@ router.post('/:id/skills', verifyToken, asyncHandler(async (req, res) => {
     { $addToSet: { skills: skillEntry } },
     { new: true }
   ).select('-password');
-  res.json(user);
+  await User.findByIdAndUpdate(req.params.id, { completionScore: calcCompletion(user) });
+  res.json({ ...user.toObject(), completionScore: calcCompletion(user) });
 }));
 
 router.delete('/:id/skills/:skill', verifyToken, asyncHandler(async (req, res) => {
@@ -49,7 +69,8 @@ router.delete('/:id/skills/:skill', verifyToken, asyncHandler(async (req, res) =
     { $pull: { skills: { name: req.params.skill } } },
     { new: true }
   ).select('-password');
-  res.json(user);
+  await User.findByIdAndUpdate(req.params.id, { completionScore: calcCompletion(user) });
+  res.json({ ...user.toObject(), completionScore: calcCompletion(user) });
 }));
 
 router.post('/:id/portfolio', verifyToken, asyncHandler(async (req, res) => {
@@ -80,7 +101,8 @@ router.post('/:id/education', verifyToken, asyncHandler(async (req, res) => {
     { $push: { education: req.body } },
     { new: true }
   ).select('-password');
-  res.json(user);
+  await User.findByIdAndUpdate(req.params.id, { completionScore: calcCompletion(user) });
+  res.json({ ...user.toObject(), completionScore: calcCompletion(user) });
 }));
 
 router.delete('/:id/education/:educId', verifyToken, asyncHandler(async (req, res) => {
@@ -90,7 +112,8 @@ router.delete('/:id/education/:educId', verifyToken, asyncHandler(async (req, re
     { $pull: { education: { _id: req.params.educId } } },
     { new: true }
   ).select('-password');
-  res.json(user);
+  await User.findByIdAndUpdate(req.params.id, { completionScore: calcCompletion(user) });
+  res.json({ ...user.toObject(), completionScore: calcCompletion(user) });
 }));
 
 /* ── Deneyim ── */
@@ -101,7 +124,8 @@ router.post('/:id/experience', verifyToken, asyncHandler(async (req, res) => {
     { $push: { experience: req.body } },
     { new: true }
   ).select('-password');
-  res.json(user);
+  await User.findByIdAndUpdate(req.params.id, { completionScore: calcCompletion(user) });
+  res.json({ ...user.toObject(), completionScore: calcCompletion(user) });
 }));
 
 router.delete('/:id/experience/:expId', verifyToken, asyncHandler(async (req, res) => {
@@ -111,7 +135,8 @@ router.delete('/:id/experience/:expId', verifyToken, asyncHandler(async (req, re
     { $pull: { experience: { _id: req.params.expId } } },
     { new: true }
   ).select('-password');
-  res.json(user);
+  await User.findByIdAndUpdate(req.params.id, { completionScore: calcCompletion(user) });
+  res.json({ ...user.toObject(), completionScore: calcCompletion(user) });
 }));
 
 /* ── Sertifika ── */

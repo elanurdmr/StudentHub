@@ -8,6 +8,7 @@ const STATUS_CLASS = { pending: 'status-pending', accepted: 'status-active', rej
 export default function MyApplications() {
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [withdrawing, setWithdrawing] = useState(null);
 
   useEffect(() => {
     projectsAPI.myApplications()
@@ -15,6 +16,19 @@ export default function MyApplications() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleWithdraw(id) {
+    if (!window.confirm('Başvuruyu geri çekmek istediğine emin misin?')) return;
+    setWithdrawing(id);
+    try {
+      await projectsAPI.withdraw(id);
+      setApps((prev) => prev.filter((a) => a._id !== id));
+    } catch {
+      alert('Başvuru geri çekilemedi.');
+    } finally {
+      setWithdrawing(null);
+    }
+  }
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
@@ -59,11 +73,23 @@ export default function MyApplications() {
                 </p>
               </div>
 
-              {app.project?._id && (
-                <Link to={`/detail/project/${app.project._id}`} className="btn btn-secondary btn-sm">
-                  Projeye Git →
-                </Link>
-              )}
+              <div style={{ display: 'flex', gap: '.5rem', flexShrink: 0 }}>
+                {app.project?._id && (
+                  <Link to={`/detail/project/${app.project._id}`} className="btn btn-secondary btn-sm">
+                    Projeye Git →
+                  </Link>
+                )}
+                {app.status === 'pending' && (
+                  <button
+                    className="btn btn-sm"
+                    style={{ background: 'none', border: '1px solid var(--coral)', color: 'var(--coral)' }}
+                    disabled={withdrawing === app._id}
+                    onClick={() => handleWithdraw(app._id)}
+                  >
+                    {withdrawing === app._id ? '…' : 'Geri Çek'}
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
