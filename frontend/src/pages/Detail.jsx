@@ -33,7 +33,7 @@ export default function Detail() {
     const api = type === 'service' ? servicesAPI.get(id)
       : type === 'need' ? needsAPI.get(id)
       : projectsAPI.get(id);
-    api.then((r) => { setData(r.data); if (r.data.hasApplied) setHasApplied(true); }).catch(() => navigate(-1)).finally(() => setLoading(false));
+    api.then((r) => { setData(r.data); if (r.data.hasApplied) setHasApplied(true); }).catch(() => setError('İlan yüklenemedi. Lütfen sayfayı yenileyin.')).finally(() => setLoading(false));
   }, [type, id]);
 
   const owner = data?.owner || {};
@@ -163,7 +163,19 @@ export default function Detail() {
   }
 
   if (loading) return <div className="empty-state" style={{ marginTop: '4rem' }}><p>Yükleniyor…</p></div>;
-  if (!data) return null;
+  if (!data) return (
+    <div className="container" style={{ paddingTop: '4rem', textAlign: 'center' }}>
+      <div className="empty-state">
+        <div className="icon">⚠️</div>
+        <h3>İlan yüklenemedi</h3>
+        <p style={{ color: 'var(--muted)' }}>{error || 'Bir hata oluştu.'}</p>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem' }}>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>Yenile</button>
+          <button className="btn btn-secondary" onClick={() => navigate(-1)}>Geri Dön</button>
+        </div>
+      </div>
+    </div>
+  );
 
   const initials = owner.firstName ? `${owner.firstName[0]}${owner.lastName?.[0] || ''}`.toUpperCase() : '?';
 
