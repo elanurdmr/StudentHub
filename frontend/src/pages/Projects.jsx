@@ -10,27 +10,62 @@ export default function Projects() {
   const { token } = useAuthStore();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [category, setCategory] = useState('');
   const [q, setQ] = useState('');
   const [filters, setFilters] = useState({});
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [aiMatches, setAiMatches] = useState([]);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiRan, setAiRan] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    projectsAPI.list({
+  const PAGE_SIZE = 20;
+
+  function buildParams(p) {
+    return {
       category: category || undefined,
       q: q || undefined,
       sort: filters.sort || undefined,
       collaborationType: filters.collaborationType || undefined,
       isRemote: filters.isRemote !== undefined && filters.isRemote !== '' ? filters.isRemote : undefined,
       requiredSkills: filters.skills || undefined,
-    })
-      .then((r) => setProjects(r.data?.data || r.data || []))
+      page: p,
+      limit: PAGE_SIZE,
+    };
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    setPage(1);
+    projectsAPI.list(buildParams(1))
+      .then((r) => {
+        const data = r.data?.data || r.data || [];
+        const total = r.data?.pagination?.total ?? data.length;
+        setProjects(data);
+        setHasMore(data.length < total);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [category, q, filters]);
+
+  async function loadMore() {
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    try {
+      const r = await projectsAPI.list(buildParams(nextPage));
+      const data = r.data?.data || r.data || [];
+      const total = r.data?.pagination?.total ?? 0;
+      setProjects((prev) => {
+        const merged = [...prev, ...data];
+        setHasMore(merged.length < total);
+        return merged;
+      });
+      setPage(nextPage);
+    } catch { /* skip */ } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function loadAiMatches() {
     if (!token) return;
@@ -177,9 +212,18 @@ export default function Projects() {
                 <p>Farklı filtreler deneyin veya kendi projenizi oluşturun</p>
               </div>
             ) : (
-              <div className="grid-3">
-                {otherProjects.map((p) => <ProjectCard key={p._id} project={p} />)}
-              </div>
+              <>
+                <div className="grid-3">
+                  {otherProjects.map((p) => <ProjectCard key={p._id} project={p} />)}
+                </div>
+                {hasMore && !aiRan && (
+                  <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                    <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
+                      {loadingMore ? 'Yükleniyor…' : 'Daha Fazla Göster'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </main>
