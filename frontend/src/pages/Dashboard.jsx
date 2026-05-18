@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { dashboardAPI, servicesAPI } from '../api/client.js';
+import { dashboardAPI, servicesAPI, aiAPI } from '../api/client.js';
 import useAuthStore from '../store/authStore.js';
 
 export default function Dashboard() {
@@ -9,12 +9,18 @@ export default function Dashboard() {
   const [progress, setProgress] = useState([]);
   const [myServices, setMyServices] = useState([]);
   const [stats, setStats] = useState(null);
+  const [aiRecs, setAiRecs] = useState([]);
+  const [aiLoading, setAiLoading] = useState(true);
 
   useEffect(() => {
     dashboardAPI.summary().then((r) => setSummary(r.data)).catch(() => {});
     dashboardAPI.progress().then((r) => setProgress(r.data)).catch(() => {});
     servicesAPI.mine().then((r) => setMyServices(r.data)).catch(() => {});
     dashboardAPI.stats().then((r) => setStats(r.data)).catch(() => {});
+    aiAPI.matchProjects()
+      .then((r) => setAiRecs(Array.isArray(r.data) ? r.data.slice(0, 3) : []))
+      .catch(() => {})
+      .finally(() => setAiLoading(false));
   }, []);
 
   const kpis = [
@@ -45,11 +51,99 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* ── AI Önerileri widget ── */}
+      <div style={{ marginBottom: '2.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.2rem' }}>
+            🤖 Sana Uygun Projeler
+          </h2>
+          <Link to="/projects" className="btn btn-secondary btn-sm">Tümünü Gör →</Link>
+        </div>
+        {aiLoading ? (
+          <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)', fontSize: '.875rem' }}>
+            Projeler analiz ediliyor…
+          </div>
+        ) : aiRecs.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '.5rem' }}>💼</div>
+            <p style={{ color: 'var(--muted)', fontSize: '.875rem' }}>
+              Profiliňe beceri ekleyince burada sana özel proje önerileri görünür.
+            </p>
+            <Link to={`/profile/${user?._id}`} className="btn btn-primary btn-sm" style={{ marginTop: '.75rem', display: 'inline-block' }}>
+              Beceri Ekle
+            </Link>
+          </div>
+        ) : (
+          <div className="grid-3">
+            {aiRecs.map((rec) => {
+              const p = rec.project || rec;
+              const score = rec.matchScore;
+              return (
+                <Link
+                  key={p._id}
+                  to={`/detail/project/${p._id}`}
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
+                  <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{ fontWeight: 700, fontSize: '.92rem', lineHeight: 1.3, flex: 1 }}>{p.title}</span>
+                      {score != null && (
+                        <span className="chip chip-violet" style={{ fontSize: '.7rem', marginLeft: '.5rem', whiteSpace: 'nowrap' }}>
+                          %{score} uyum
+                        </span>
+                      )}
+                    </div>
+                    {rec.reason && (
+                      <p style={{ fontSize: '.8rem', color: 'var(--muted)', lineHeight: 1.5, margin: 0 }}>{rec.reason}</p>
+                    )}
+                    <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', marginTop: 'auto' }}>
+                      {(p.requiredSkills || []).slice(0, 3).map((s) => (
+                        <span key={s} className="chip chip-indigo" style={{ fontSize: '.68rem' }}>{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {stats && (
         <>
           <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.2rem', marginBottom: '1rem' }}>
             Kazanç ve harcama
           </h2>
+
+          {/* ── Kazanç grafiği (CSS bar chart) ── */}
+          {(() => {
+            const earned = stats.earnings?.total ?? 0;
+            const spent = stats.spending?.total ?? 0;
+            const maxVal = Math.max(earned, spent, 1);
+            const bars = [
+              { label: 'Kazanç', value: earned, color: 'var(--teal)', pct: Math.round((earned / maxVal) * 100) },
+              { label: 'Harcama', value: spent, color: 'var(--coral)', pct: Math.round((spent / maxVal) * 100) },
+            ];
+            return (
+              <div className="card" style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: '1rem' }}>Genel Finansal Özet (₺)</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '.85rem' }}>
+                  {bars.map((b) => (
+                    <div key={b.label}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '.3rem' }}>
+                        <span style={{ fontSize: '.82rem', fontWeight: 600 }}>{b.label}</span>
+                        <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.88rem', color: b.color }}>₺{b.value}</span>
+                      </div>
+                      <div style={{ height: '10px', borderRadius: '5px', background: 'var(--border)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${b.pct}%`, background: b.color, borderRadius: '5px', transition: 'width .6s ease' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="grid-3" style={{ marginBottom: '2.5rem' }}>
             <div className="card">
               <div style={{ color: 'var(--muted)', fontSize: '.8rem', marginBottom: '.35rem' }}>Satıcı kazancı</div>

@@ -60,7 +60,7 @@ router.post(
     if (await User.findOne({ email }))
       return res.status(409).json({ error: 'Bu e-posta zaten kayıtlı' });
 
-    const user = await User.create({ firstName, lastName, email, password });
+    const user = await User.create({ firstName, lastName, email, password, onboardingCompleted: false });
     const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m' });
     const rawRefresh = await RefreshToken.generate(user._id, req.headers['user-agent'] || '');
     res.cookie('refreshToken', rawRefresh, COOKIE_OPTS);

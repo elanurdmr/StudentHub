@@ -75,6 +75,10 @@ const userSchema = new mongoose.Schema({
   reviewCount: { type: Number, default: 0 },
   isOnline: { type: Boolean, default: false },
   lastSeen: { type: Date },
+  onboardingCompleted: { type: Boolean }, // undefined = eski kullanıcı, false = yeni kayıt, true = tamamlandı
+  blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  followers:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  following:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {

@@ -39,6 +39,14 @@ export default function Profile() {
   const [editSocial, setEditSocial]       = useState(false);
   const [social, setSocial]               = useState({ github: '', linkedin: '', website: '', twitter: '' });
 
+  /* Takip & Engel */
+  const [isFollowing, setIsFollowing]     = useState(false);
+  const [isBlocked, setIsBlocked]         = useState(false);
+  const [followModal, setFollowModal]     = useState(null); // 'followers' | 'following' | null
+  const [followList, setFollowList]       = useState([]);
+  const [blockedList, setBlockedList]     = useState([]);
+  const [showBlocked, setShowBlocked]     = useState(false);
+
   /* CV sections */
   const [showEduModal, setShowEduModal]   = useState(false);
   const [eduForm, setEduForm]             = useState({ institution: '', degree: 'bachelor', field: '', startYear: '', endYear: '', gpa: '' });
@@ -72,6 +80,8 @@ export default function Profile() {
         setBio(p.data.bio || '');
         setHeadline(p.data.headline || '');
         setSocial(p.data.socialLinks || { github: '', linkedin: '', website: '', twitter: '' });
+        setIsFollowing(p.data.isFollowing || false);
+        setIsBlocked(p.data.isBlocked || false);
         setReviews(r.data);
         setUserServices(sv.data?.data || sv.data || []);
         setUserProjects(pj.data?.data || pj.data || []);
@@ -214,6 +224,51 @@ export default function Profile() {
     navigate(`/messages?to=${id}&name=${name}`);
   }
 
+  async function handleFollow() {
+    if (isFollowing) {
+      await usersAPI.unfollow(id);
+      setIsFollowing(false);
+      setProfile((p) => ({ ...p, followers: (p.followers || []).filter((f) => String(f) !== meId) }));
+    } else {
+      await usersAPI.follow(id);
+      setIsFollowing(true);
+      setProfile((p) => ({ ...p, followers: [...(p.followers || []), meId] }));
+    }
+  }
+
+  async function handleBlock() {
+    if (isBlocked) {
+      await usersAPI.unblock(id);
+      setIsBlocked(false);
+    } else {
+      if (!confirm(`${profile.firstName} ${profile.lastName} adlı kullanıcıyı engellemek istediğinize emin misiniz?`)) return;
+      await usersAPI.block(id);
+      setIsBlocked(true);
+    }
+  }
+
+  async function openFollowModal(type) {
+    setFollowList([]);
+    setFollowModal(type);
+    try {
+      const { data } = type === 'followers' ? await usersAPI.followers(id) : await usersAPI.following(id);
+      setFollowList(Array.isArray(data) ? data : []);
+    } catch { setFollowList([]); }
+  }
+
+  async function openBlockedList() {
+    setShowBlocked(true);
+    try {
+      const { data } = await usersAPI.blockedList(id);
+      setBlockedList(Array.isArray(data) ? data : []);
+    } catch { setBlockedList([]); }
+  }
+
+  async function handleUnblockFromList(uid) {
+    await usersAPI.unblock(uid);
+    setBlockedList((prev) => prev.filter((u) => String(u._id) !== uid));
+  }
+
   if (loading) return <div className="empty-state" style={{ marginTop: '4rem' }}><p>Yükleniyor…</p></div>;
   if (!profile) return null;
 
@@ -221,8 +276,68 @@ export default function Profile() {
   const colorClasses = ['av-indigo', 'av-violet', 'av-teal', 'av-coral', 'av-amber'];
   const colorClass  = colorClasses[profile.firstName.charCodeAt(0) % colorClasses.length];
 
+  /* ── Takipçi/Takip Edilen Modalı ── */
+  const UserListModal = ({ title, list, onClose }) => (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={onClose}>
+      <div style={{ background: 'var(--card)', borderRadius: '1rem', padding: '1.5rem', width: '100%', maxWidth: '380px', maxHeight: '70vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '1rem', margin: 0 }}>{title}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.2rem' }}>✕</button>
+        </div>
+        {list.length === 0 ? (
+          <p style={{ color: 'var(--muted)', fontSize: '.875rem', textAlign: 'center', padding: '1rem' }}>Henüz kimse yok</p>
+        ) : list.map((u) => (
+          <Link key={u._id} to={`/profile/${u._id}`} onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.6rem', borderRadius: '.6rem', textDecoration: 'none', color: 'inherit', marginBottom: '.25rem' }}>
+            <div className={`avatar av-sm ${colorClasses[u.firstName?.charCodeAt(0) % colorClasses.length]}`}>
+              {u.avatar ? <img src={u.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : `${u.firstName?.[0]}${u.lastName?.[0]}`}
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '.88rem' }}>{u.firstName} {u.lastName}</div>
+              {u.headline && <div style={{ fontSize: '.75rem', color: 'var(--muted)' }}>{u.headline}</div>}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+
+  /* ── Engellenenler Modalı ── */
+  const BlockedModal = () => (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setShowBlocked(false)}>
+      <div style={{ background: 'var(--card)', borderRadius: '1rem', padding: '1.5rem', width: '100%', maxWidth: '380px', maxHeight: '70vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '1rem', margin: 0 }}>🚫 Engellenen Kullanıcılar</h3>
+          <button onClick={() => setShowBlocked(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.2rem' }}>✕</button>
+        </div>
+        {blockedList.length === 0 ? (
+          <p style={{ color: 'var(--muted)', fontSize: '.875rem', textAlign: 'center', padding: '1rem' }}>Engellenen kullanıcı yok</p>
+        ) : blockedList.map((u) => (
+          <div key={u._id} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.6rem', borderRadius: '.6rem', marginBottom: '.25rem' }}>
+            <div className={`avatar av-sm ${colorClasses[u.firstName?.charCodeAt(0) % colorClasses.length]}`}>
+              {u.avatar ? <img src={u.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : `${u.firstName?.[0]}${u.lastName?.[0]}`}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: '.88rem' }}>{u.firstName} {u.lastName}</div>
+            </div>
+            <button className="btn btn-secondary btn-sm" style={{ color: 'var(--teal)', fontSize: '.75rem' }} onClick={() => handleUnblockFromList(String(u._id))}>
+              Engeli Kaldır
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
+      {followModal && (
+        <UserListModal
+          title={followModal === 'followers' ? `Takipçiler (${(profile.followers || []).length})` : `Takip Edilenler (${(profile.following || []).length})`}
+          list={followList}
+          onClose={() => setFollowModal(null)}
+        />
+      )}
+      {showBlocked && <BlockedModal />}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '280px 1fr', gap: '2rem', alignItems: 'start' }}>
 
         {/* ──────── SOL SIDEBAR ──────── */}
@@ -249,6 +364,19 @@ export default function Profile() {
 
             <h2 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '.25rem' }}>{profile.firstName} {profile.lastName}</h2>
 
+            {/* Takipçi / Takip edilen */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem', margin: '.4rem 0 .6rem' }}>
+              <button onClick={() => openFollowModal('followers')} style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', padding: 0 }}>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)' }}>{(profile.followers || []).length}</div>
+                <div style={{ fontSize: '.72rem', color: 'var(--muted)' }}>Takipçi</div>
+              </button>
+              <div style={{ width: 1, background: 'var(--border)' }} />
+              <button onClick={() => openFollowModal('following')} style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', padding: 0 }}>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)' }}>{(profile.following || []).length}</div>
+                <div style={{ fontSize: '.72rem', color: 'var(--muted)' }}>Takip Edilen</div>
+              </button>
+            </div>
+
             {/* Headline */}
             {editHeadline && isMe ? (
               <div style={{ marginBottom: '.5rem' }}>
@@ -266,6 +394,13 @@ export default function Profile() {
 
             {profile.rating > 0 && (
               <div style={{ color: 'var(--amber)', marginBottom: '.5rem' }}>★ {profile.rating} ({profile.reviewCount} değerlendirme)</div>
+            )}
+
+            {/* Profil görüntülenme */}
+            {profile.profileViews > 0 && (
+              <div style={{ fontSize: '.78rem', color: 'var(--muted)', marginBottom: '.4rem' }}>
+                👁️ {profile.profileViews} kez görüntülendi
+              </div>
             )}
 
             {/* Profil tamamlama skoru */}
@@ -301,14 +436,35 @@ export default function Profile() {
             {/* Aksiyonlar */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginTop: '1rem' }}>
               {isMe ? (
-                <Link to="/notifications" className="btn btn-secondary btn-sm w-full" style={{ justifyContent: 'center' }}>
-                  🔔 Bildirimler
-                </Link>
+                <>
+                  <Link to="/notifications" className="btn btn-secondary btn-sm w-full" style={{ justifyContent: 'center' }}>
+                    🔔 Bildirimler
+                  </Link>
+                  <button className="btn btn-secondary btn-sm w-full" style={{ justifyContent: 'center' }} onClick={openBlockedList}>
+                    🚫 Engellenenler ({(profile.blockedUsers || []).length})
+                  </button>
+                </>
               ) : (
                 me && (
-                  <button className="btn btn-primary btn-sm w-full" style={{ justifyContent: 'center' }} onClick={handleMessage}>
-                    💬 Mesaj Gönder
-                  </button>
+                  <>
+                    <button
+                      className={`btn btn-sm w-full ${isFollowing ? 'btn-secondary' : 'btn-accent2'}`}
+                      style={{ justifyContent: 'center' }}
+                      onClick={handleFollow}
+                    >
+                      {isFollowing ? '✓ Takip Ediliyor' : '+ Takip Et'}
+                    </button>
+                    <button className="btn btn-primary btn-sm w-full" style={{ justifyContent: 'center' }} onClick={handleMessage}>
+                      💬 Mesaj Gönder
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm w-full"
+                      style={{ justifyContent: 'center', color: isBlocked ? 'var(--teal)' : 'var(--coral)' }}
+                      onClick={handleBlock}
+                    >
+                      {isBlocked ? '🔓 Engeli Kaldır' : '🚫 Engelle'}
+                    </button>
+                  </>
                 )
               )}
               {me && !isMe && (

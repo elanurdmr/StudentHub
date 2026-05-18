@@ -7,7 +7,7 @@ import Application from '../models/Application.js';
 import Offer from '../models/Offer.js';
 import Review from '../models/Review.js';
 import Message from '../models/Message.js';
-import { verifyToken } from '../middleware/auth.js';
+import { verifyToken, optionalAuth } from '../middleware/auth.js';
 import { asyncHandler, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
 
 const router = Router();
@@ -26,10 +26,24 @@ function calcCompletion(user) {
   return Math.min(score, 100);
 }
 
-router.get('/:id', asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id).select('-password');
+router.get('/:id', optionalAuth, asyncHandler(async (req, res) => {
+  const isOwn = req.user?.id === req.params.id;
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    isOwn ? {} : { $inc: { profileViews: 1 } },
+    { new: true }
+  ).select('-password -blockedUsers');
   if (!user) throw new NotFoundError('Kullanıcı');
-  res.json(user);
+
+  let isFollowing = false;
+  let isBlocked = false;
+  if (req.user && !isOwn) {
+    const me = await User.findById(req.user.id).select('following blockedUsers');
+    isFollowing = me?.following?.some((f) => String(f) === req.params.id) || false;
+    isBlocked   = me?.blockedUsers?.some((b) => String(b) === req.params.id) || false;
+  }
+
+  res.json({ ...user.toObject(), isFollowing, isBlocked });
 }));
 
 router.patch('/:id', verifyToken, asyncHandler(async (req, res) => {
@@ -175,6 +189,67 @@ router.delete('/:id/account', verifyToken, asyncHandler(async (req, res) => {
   ]);
   await User.findByIdAndDelete(uid);
   res.json({ message: 'Hesabınız ve tüm verileriniz silindi' });
+}));
+
+/* ── Takip / Takipten çık ── */
+router.post('/:id/follow', verifyToken, asyncHandler(async (req, res) => {
+  if (req.user.id === req.params.id) return res.status(400).json({ error: 'Kendinizi takip edemezsiniz' });
+  await Promise.all([
+    User.findByIdAndUpdate(req.user.id, { $addToSet: { following: req.params.id } }),
+    User.findByIdAndUpdate(req.params.id, { $addToSet: { followers: req.user.id } }),
+  ]);
+  res.json({ following: true });
+}));
+
+router.delete('/:id/follow', verifyToken, asyncHandler(async (req, res) => {
+  await Promise.all([
+    User.findByIdAndUpdate(req.user.id, { $pull: { following: req.params.id } }),
+    User.findByIdAndUpdate(req.params.id, { $pull: { followers: req.user.id } }),
+  ]);
+  res.json({ following: false });
+}));
+
+router.get('/:id/followers', asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).populate('followers', 'firstName lastName avatar headline').select('followers');
+  if (!user) throw new NotFoundError('Kullanıcı');
+  res.json(user.followers || []);
+}));
+
+router.get('/:id/following', asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).populate('following', 'firstName lastName avatar headline').select('following');
+  if (!user) throw new NotFoundError('Kullanıcı');
+  res.json(user.following || []);
+}));
+
+/* ── Engelle / Engeli kaldır ── */
+router.post('/:id/block', verifyToken, asyncHandler(async (req, res) => {
+  if (req.user.id === req.params.id) return res.status(400).json({ error: 'Kendinizi engelleyemezsiniz' });
+  await User.findByIdAndUpdate(req.user.id, { $addToSet: { blockedUsers: req.params.id } });
+  res.json({ blocked: true });
+}));
+
+router.delete('/:id/block', verifyToken, asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(req.user.id, { $pull: { blockedUsers: req.params.id } });
+  res.json({ blocked: false });
+}));
+
+router.get('/:id/blocked', verifyToken, asyncHandler(async (req, res) => {
+  if (req.user.id !== req.params.id) throw new ForbiddenError();
+  const user = await User.findById(req.params.id).populate('blockedUsers', 'firstName lastName avatar headline').select('blockedUsers');
+  if (!user) throw new NotFoundError('Kullanıcı');
+  res.json(user.blockedUsers || []);
+}));
+
+/* ── Onboarding tamamla ── */
+router.patch('/:id/complete-onboarding', verifyToken, asyncHandler(async (req, res) => {
+  if (req.user.id !== req.params.id) throw new ForbiddenError();
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { onboardingCompleted: true },
+    { new: true }
+  ).select('-password');
+  if (!user) throw new NotFoundError('Kullanıcı');
+  res.json(user);
 }));
 
 /* ── KVKK: Veri dışa aktarma ── */

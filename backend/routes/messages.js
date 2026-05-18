@@ -55,6 +55,16 @@ router.get('/:convId', verifyToken, asyncHandler(async (req, res) => {
 
 router.post('/:convId', verifyToken, asyncHandler(async (req, res) => {
   if (!userBelongsToConversation(req.params.convId, req.user.id)) throw new ForbiddenError();
+
+  // Engellenmiş mi kontrol et
+  const otherId = getOtherParticipantId(req.params.convId, req.user.id);
+  if (otherId && mongoose.Types.ObjectId.isValid(otherId)) {
+    const recipient = await User.findById(otherId).select('blockedUsers');
+    if (recipient?.blockedUsers?.some((b) => String(b) === req.user.id)) {
+      return res.status(403).json({ error: 'Bu kullanıcıya mesaj gönderemezsiniz', code: 'BLOCKED' });
+    }
+  }
+
   const msg = await Message.create({
     conversationId: req.params.convId,
     sender: req.user.id,

@@ -151,6 +151,29 @@ export const usersAPI = {
     try { return await api.delete(`/users/${id}/certifications/${certId}`); }
     catch { return { data: MOCK_USER }; }
   },
+  completeOnboarding: async (id) => {
+    try { return await api.patch(`/users/${id}/complete-onboarding`); }
+    catch { return { data: { ...MOCK_USER, onboardingCompleted: true } }; }
+  },
+  follow: async (id) => {
+    try { return await api.post(`/users/${id}/follow`); }
+    catch { return { data: { following: true } }; }
+  },
+  unfollow: async (id) => {
+    try { return await api.delete(`/users/${id}/follow`); }
+    catch { return { data: { following: false } }; }
+  },
+  followers: (id) => tryOrMock(() => api.get(`/users/${id}/followers`), []),
+  following: (id) => tryOrMock(() => api.get(`/users/${id}/following`), []),
+  block: async (id) => {
+    try { return await api.post(`/users/${id}/block`); }
+    catch { return { data: { blocked: true } }; }
+  },
+  unblock: async (id) => {
+    try { return await api.delete(`/users/${id}/block`); }
+    catch { return { data: { blocked: false } }; }
+  },
+  blockedList: (id) => tryOrMock(() => api.get(`/users/${id}/blocked`), []),
 };
 
 /* ── Services ── */
