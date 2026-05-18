@@ -475,6 +475,35 @@ export default function Profile() {
             </div>
           </div>
 
+          {/* Hesap Sil */}
+          {isMe && (
+            <div className="card" style={{ marginTop: '1rem', padding: '1.25rem', border: '1px solid #fecdd3' }}>
+              <h4 style={{ fontFamily: 'Syne, sans-serif', fontSize: '.85rem', color: 'var(--coral)', marginBottom: '.5rem' }}>⚠️ Tehlikeli Bölge</h4>
+              <p style={{ fontSize: '.78rem', color: 'var(--muted)', marginBottom: '.75rem', lineHeight: 1.5 }}>
+                Hesabını silersen tüm ilanların, başvuruların ve verilerlin kalıcı olarak silinir. Bu işlem geri alınamaz.
+              </p>
+              <button
+                className="btn btn-sm"
+                style={{ width: '100%', justifyContent: 'center', background: 'none', border: '1px solid var(--coral)', color: 'var(--coral)' }}
+                onClick={async () => {
+                  const confirmed = confirm('Hesabını kalıcı olarak silmek istediğine emin misin?\n\nTüm verilerlin silinecek ve bu işlem geri alınamaz.');
+                  if (!confirmed) return;
+                  const confirmed2 = confirm('Son kez onaylıyor musun? Bu işlem GERİ ALINAMAZ.');
+                  if (!confirmed2) return;
+                  try {
+                    await usersAPI.deleteAccount(id);
+                    useAuthStore.getState().logout();
+                    window.location.href = '/';
+                  } catch (err) {
+                    alert(err.response?.data?.error || 'Hesap silinirken hata oluştu');
+                  }
+                }}
+              >
+                🗑️ Hesabımı Sil
+              </button>
+            </div>
+          )}
+
           {/* Sosyal bağlantılar */}
           {(isMe || profile.socialLinks?.github || profile.socialLinks?.linkedin || profile.socialLinks?.website || profile.socialLinks?.twitter) && (
             <div className="card" style={{ marginTop: '1rem', padding: '1.5rem' }}>

@@ -43,6 +43,10 @@ export default function Auth() {
     setApiError('');
   }
 
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
+
   async function handleLogin(e) {
     e.preventDefault();
     const errs = validate(form, { email: RULES.email, password: RULES.password });
@@ -54,6 +58,20 @@ export default function Auth() {
       navigate('/dashboard');
     } catch (err) {
       setApiError(err.response?.data?.error || 'Giriş başarısız');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgot(e) {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+    setLoading(true);
+    try {
+      await authAPI.forgotPassword(forgotEmail.trim());
+      setForgotSent(true);
+    } catch {
+      setForgotSent(true); // Güvenlik: hata olsa da aynı mesajı göster
     } finally {
       setLoading(false);
     }
@@ -111,12 +129,44 @@ export default function Auth() {
             </div>
           )}
 
-          {tab === 'login' ? (
+          {tab === 'login' && forgotMode ? (
+            forgotSent ? (
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📬</div>
+                <h3 style={{ fontFamily: 'Syne, sans-serif', marginBottom: '.5rem' }}>Mail gönderildi!</h3>
+                <p style={{ color: 'var(--muted)', fontSize: '.9rem', marginBottom: '1.5rem' }}>
+                  E-posta adresin kayıtlıysa sıfırlama bağlantısı gönderildi. Spam klasörünü de kontrol et.
+                </p>
+                <button className="btn btn-secondary w-full" style={{ justifyContent: 'center' }} onClick={() => { setForgotMode(false); setForgotSent(false); setForgotEmail(''); }}>
+                  Giriş ekranına dön
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgot}>
+                <p style={{ color: 'var(--muted)', fontSize: '.875rem', marginBottom: '1.25rem' }}>
+                  Kayıtlı e-posta adresini gir, sıfırlama bağlantısı gönderelim.
+                </p>
+                <div className="form-group">
+                  <label className="form-label">E-posta</label>
+                  <input className="form-control" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="ornek@email.com" required />
+                </div>
+                <button className="btn btn-primary w-full" type="submit" disabled={loading} style={{ justifyContent: 'center', marginBottom: '.75rem' }}>
+                  {loading ? 'Gönderiliyor…' : 'Sıfırlama Bağlantısı Gönder'}
+                </button>
+                <button type="button" className="btn btn-ghost w-full" style={{ justifyContent: 'center', fontSize: '.875rem' }} onClick={() => setForgotMode(false)}>
+                  ← Geri dön
+                </button>
+              </form>
+            )
+          ) : tab === 'login' ? (
             <form onSubmit={handleLogin}>
               <Field label="E-posta" name="email" type="email" value={form.email} onChange={handleChange} error={errors.email} />
               <Field label="Şifre" name="password" type="password" value={form.password} onChange={handleChange} error={errors.password} />
               <button className="btn btn-primary w-full" type="submit" disabled={loading} style={{ marginTop: '.5rem', justifyContent: 'center' }}>
                 {loading ? 'Giriş yapılıyor…' : 'Giriş Yap'}
+              </button>
+              <button type="button" onClick={() => { setForgotMode(true); setApiError(''); }} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '.85rem', cursor: 'pointer', marginTop: '.75rem', width: '100%', textAlign: 'center' }}>
+                Şifremi unuttum
               </button>
             </form>
           ) : (

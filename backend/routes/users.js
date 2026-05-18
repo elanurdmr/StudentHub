@@ -7,6 +7,8 @@ import Application from '../models/Application.js';
 import Offer from '../models/Offer.js';
 import Review from '../models/Review.js';
 import Message from '../models/Message.js';
+import Notification from '../models/Notification.js';
+import RefreshToken from '../models/RefreshToken.js';
 import { verifyToken, optionalAuth } from '../middleware/auth.js';
 import { asyncHandler, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
 
@@ -250,6 +252,33 @@ router.patch('/:id/complete-onboarding', verifyToken, asyncHandler(async (req, r
   ).select('-password');
   if (!user) throw new NotFoundError('Kullanıcı');
   res.json(user);
+}));
+
+/* ── Hesap silme ── */
+router.delete('/:id', verifyToken, asyncHandler(async (req, res) => {
+  if (req.user.id !== req.params.id) throw new ForbiddenError();
+  const uid = req.params.id;
+
+  await Promise.all([
+    Service.deleteMany({ owner: uid }),
+    Project.deleteMany({ owner: uid }),
+    Need.deleteMany({ owner: uid }),
+    Application.deleteMany({ applicant: uid }),
+    Offer.deleteMany({ offerer: uid }),
+    Review.deleteMany({ reviewer: uid }),
+    Message.deleteMany({ sender: uid }),
+    Notification.deleteMany({ user: uid }),
+    RefreshToken.deleteMany({ user: uid }),
+    // Diğer kullanıcıların listelerinden çıkar
+    User.updateMany(
+      { $or: [{ followers: uid }, { following: uid }, { blockedUsers: uid }] },
+      { $pull: { followers: uid, following: uid, blockedUsers: uid } }
+    ),
+  ]);
+
+  await User.findByIdAndDelete(uid);
+  res.clearCookie('refreshToken', { path: '/api/auth' });
+  res.json({ message: 'Hesap silindi' });
 }));
 
 /* ── KVKK: Veri dışa aktarma ── */

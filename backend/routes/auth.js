@@ -8,6 +8,7 @@ import PasswordReset from '../models/PasswordReset.js';
 import RefreshToken from '../models/RefreshToken.js';
 import { verifyToken } from '../middleware/auth.js';
 import { asyncHandler, AppError, UnauthorizedError } from '../middleware/errorHandler.js';
+import { sendPasswordResetEmail } from '../services/emailService.js';
 
 const router = Router();
 
@@ -148,7 +149,7 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
 
   const token = crypto.randomBytes(32).toString('hex');
   await PasswordReset.create({ userId: user._id, token, expiresAt: new Date(Date.now() + 60 * 60 * 1000) });
-  console.log(`[ŞİFRE SIFIRLAMA] Token: ${token} — Kullanıcı: ${email}`);
+  await sendPasswordResetEmail(email, token);
   res.json({ message: 'Geçerli e-posta ise sıfırlama bağlantısı gönderildi' });
 }));
 

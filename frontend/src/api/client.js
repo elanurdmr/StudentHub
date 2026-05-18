@@ -101,7 +101,7 @@ export const authAPI = {
   },
   me: () => tryOrMock(() => api.get('/auth/me'), MOCK_USER),
   refresh: () => api.post('/auth/refresh'),
-  forgotPassword: (email) => api.post('/auth/request-reset', { email }),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
 };
 
 /* ── Users ── */
@@ -174,6 +174,7 @@ export const usersAPI = {
     catch { return { data: { blocked: false } }; }
   },
   blockedList: (id) => tryOrMock(() => api.get(`/users/${id}/blocked`), []),
+  deleteAccount: (id) => api.delete(`/users/${id}`),
 };
 
 /* ── Services ── */
