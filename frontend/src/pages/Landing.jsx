@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 const features = [
-  { icon: '🛍', title: 'Hizmet Pazarı', desc: 'Tasarım, yazılım, akademik destek ve daha fazlasını sat veya satın al.', color: '#eef2ff', accent: '#4f46e5', link: '/market' },
+  { icon: '🛍', title: 'Hizmet Pazarı', desc: 'Tasarım, yazılım, akademik destek ve daha fazlasını sat veya satın al.', color: 'rgba(99,102,241,0.08)', accent: '#4f46e5', link: '/market' },
   { icon: '🤝', title: 'Proje Ekibi', desc: 'Proje için ekip kur ya da bir ekibe katıl. Skill matching ile otomatik öneri.', color: '#f5f3ff', accent: '#7c3aed', link: '/projects' },
   { icon: '📢', title: 'İhtiyaç İlanı', desc: 'İhtiyacını ilan et, teklifleri al, içlerinden en iyisini seç.', color: '#fff1f2', accent: '#f43f5e', link: '/needs' },
 ];

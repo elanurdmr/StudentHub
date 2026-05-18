@@ -112,9 +112,9 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   letter-spacing: .02em;
 }
-.chip-indigo { background: #eef2ff; color: #4f46e5; }
-.chip-violet { background: #f5f3ff; color: #7c3aed; }
-.chip-lime { background: #f7fee7; color: #4d7c0f; }
+.chip-indigo { background: rgba(99,102,241,0.12); color: #4f46e5; }
+.chip-violet { background: rgba(124,58,237,0.12); color: #7c3aed; }
+.chip-lime { background: rgba(77,124,15,0.12); color: #4d7c0f; }
 .chip-coral { background: #fff1f2; color: #be123c; }
 .chip-teal { background: #f0fdfa; color: #0f766e; }
 .chip-amber { background: #fffbeb; color: #b45309; }

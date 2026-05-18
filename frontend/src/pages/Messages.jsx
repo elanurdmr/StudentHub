@@ -117,7 +117,7 @@ export default function Messages() {
             onClick={() => openConvo([user?._id, toId].sort().join('-'), toName)}
             style={{
               padding: '1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)',
-              background: activeConv === [user?._id, toId].sort().join('-') ? '#eef2ff' : '#f5f3ff',
+              background: activeConv === [user?._id, toId].sort().join('-') ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.04)',
               display: 'flex', alignItems: 'center', gap: '.75rem',
             }}
           >
@@ -147,7 +147,7 @@ export default function Messages() {
                 onClick={() => selectConvo(c)}
                 style={{
                   padding: '1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)',
-                  background: activeConv === c.conversationId ? '#eef2ff' : 'transparent',
+                  background: activeConv === c.conversationId ? 'rgba(99,102,241,0.1)' : 'transparent',
                   transition: 'background .1s', display: 'flex', alignItems: 'center', gap: '.75rem',
                 }}
               >

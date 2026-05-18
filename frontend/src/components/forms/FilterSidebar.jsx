@@ -56,7 +56,7 @@ export default function FilterSidebar({
               <button
                 key={v}
                 onClick={() => set('minRating', v === filters.minRating ? 0 : v)}
-                style={{ padding: '.3rem .65rem', borderRadius: '999px', border: `1.5px solid ${filters.minRating === v && v > 0 ? 'var(--accent)' : 'var(--border)'}`, background: filters.minRating === v && v > 0 ? '#eef2ff' : 'var(--card)', cursor: 'pointer', fontSize: '.8rem', fontWeight: 600, color: filters.minRating === v && v > 0 ? 'var(--accent)' : 'var(--ink)' }}
+                style={{ padding: '.3rem .65rem', borderRadius: '999px', border: `1.5px solid ${filters.minRating === v && v > 0 ? 'var(--accent)' : 'var(--border)'}`, background: filters.minRating === v && v > 0 ? 'rgba(99,102,241,0.1)' : 'var(--card)', cursor: 'pointer', fontSize: '.8rem', fontWeight: 600, color: filters.minRating === v && v > 0 ? 'var(--accent)' : 'var(--ink)' }}
               >
                 {v === 0 ? 'Hepsi' : `★ ${v}+`}
               </button>

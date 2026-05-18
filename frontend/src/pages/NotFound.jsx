@@ -8,7 +8,7 @@ export default function NotFound() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #eef2ff, #f5f3ff)',
+        background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(124,58,237,0.06))',
         padding: '2rem',
         textAlign: 'center',
       }}

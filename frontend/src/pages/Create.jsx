@@ -118,7 +118,7 @@ export default function Create() {
       {!isEdit && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem', marginBottom: '2rem' }}>
           {TYPES.map((t) => (
-            <button key={t.value} onClick={() => setType(t.value)} className={type === t.value ? 'type-btn-selected' : ''} style={{ padding: '1.25rem', border: `2px solid ${type === t.value ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius)', background: type === t.value ? '#eef2ff' : 'var(--card)', cursor: 'pointer', textAlign: 'center', transition: 'all .15s' }}>
+            <button key={t.value} onClick={() => setType(t.value)} className={type === t.value ? 'type-btn-selected' : ''} style={{ padding: '1.25rem', border: `2px solid ${type === t.value ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius)', background: type === t.value ? 'rgba(99,102,241,0.1)' : 'var(--card)', cursor: 'pointer', textAlign: 'center', transition: 'all .15s' }}>
               <div style={{ fontSize: '1.75rem', marginBottom: '.5rem' }}>{t.icon}</div>
               <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: type === t.value ? 'var(--accent)' : 'var(--ink)' }}>{t.label}</div>
               <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginTop: '.25rem' }}>{t.desc}</div>
