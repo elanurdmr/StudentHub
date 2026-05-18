@@ -64,6 +64,15 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+const forgotLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 dakika
+  limit: 3,
+  message: { error: 'Çok fazla şifre sıfırlama isteği. 10 dakika sonra tekrar deneyin.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/auth/forgot-password', forgotLimiter);
+
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

@@ -151,6 +151,9 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
   if (!user) return res.json({ message: 'Geçerli e-posta ise sıfırlama bağlantısı gönderildi' });
 
+  // Eski aktif tokenları iptal et
+  await PasswordReset.updateMany({ userId: user._id, used: false }, { used: true });
+
   const token = crypto.randomBytes(32).toString('hex');
   await PasswordReset.create({ userId: user._id, token, expiresAt: new Date(Date.now() + 60 * 60 * 1000) });
   await sendPasswordResetEmail(email, token);
