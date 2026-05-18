@@ -14,11 +14,8 @@ function extractJsonArray(text) {
   }
 }
 
-/**
- * @returns {Promise<Array<{ project: object, reason: string, matchScore: number }>>}
- */
 export async function fetchGeminiProjectMatches(userId) {
-  const key = process.env.GEMINI_API_KEY?.trim();
+  const key = process.env.GROQ_API_KEY?.trim();
   if (!key) return null;
 
   const user = await User.findById(userId);
@@ -32,8 +29,9 @@ export async function fetchGeminiProjectMatches(userId) {
   if (projects.length === 0) return [];
 
   const skillsStr = user.skills?.length
-    ? user.skills.map(s => typeof s === 'string' ? s : (s.name || '')).filter(Boolean).join(', ')
+    ? user.skills.map((s) => (typeof s === 'string' ? s : s.name || '')).filter(Boolean).join(', ')
     : '(belirtilmedi)';
+
   const listStr = projects
     .map(
       (p) =>
@@ -51,26 +49,30 @@ Görev: kullanıcıya en uygun en fazla 3 projeyi seç. Her öğe şu anahtarlar
 Çıktı formatı kesin olarak: [{"projectId":"...","reason":"...","matchScore":85}]
 Başka açıklama veya kod bloğu yazma.`;
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-  const response = await fetch(url, {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`,
+    },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      max_tokens: 1024,
     }),
   });
 
   const data = await response.json();
   if (!response.ok) {
-    const err = new Error(data.error?.message || 'Gemini yanıt hatası');
+    const err = new Error(data.error?.message || 'Groq yanıt hatası');
     err.status = 502;
     throw err;
   }
 
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = data?.choices?.[0]?.message?.content;
   const parsed = extractJsonArray(text);
   const byId = new Map(projects.map((p) => [String(p._id), p]));
 
