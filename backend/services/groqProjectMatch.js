@@ -58,14 +58,32 @@ export async function fetchGroqProjectMatches(userId) {
     return { project: p, required, matched: matchedSkills, matchScore: score };
   });
 
-  // Eşleşme skoru olanları sırala; yoksa ilk 3 projeyi al
+  // Her kullanıcı becerisinin kaç projede geçtiğini hesapla (nadir beceriler daha değerli)
+  const skillRarityBonus = {};
+  for (const s of userSkillsRaw) {
+    const sName = (typeof s === 'string' ? s : s?.name || '').toLowerCase().trim();
+    const count = scoredProjects.filter((p) =>
+      p.matched.some((m) => m.toLowerCase().includes(sName) || sName.includes(m.toLowerCase()))
+    ).length;
+    skillRarityBonus[sName] = count > 0 ? 1 / count : 0; // az projede geçiyorsa bonus yüksek
+  }
+
+  // Eşit skorda nadir becerileri öne çıkar
   const candidates = scoredProjects
     .filter((p) => p.matchScore > 0)
-    .sort((a, b) => b.matchScore - a.matchScore);
+    .map((p) => {
+      const rarityBoost = p.matched.reduce((sum, m) => {
+        const key = m.toLowerCase().trim();
+        return sum + (skillRarityBonus[key] || 0);
+      }, 0);
+      return { ...p, sortKey: p.matchScore + rarityBoost * 5 };
+    })
+    .sort((a, b) => b.sortKey - a.sortKey);
 
-  const top3 = candidates.length > 0
-    ? candidates.slice(0, 3)
-    : scoredProjects.slice(0, 3);
+  const top6 = candidates.length > 0
+    ? candidates.slice(0, 6)
+    : scoredProjects.slice(0, 6);
+  const top3 = top6; // değişken adı korunuyor (aşağıda kullanılıyor)
 
   if (top3.length === 0) return [];
 
@@ -86,7 +104,7 @@ Kullanici becerileri: ${skillsStr}
 Projeler (hepsi icin reason yaz, hicbirini atlama):
 ${listStr}
 
-Gorev: her proje icin kullaniciya neden uygun oldugunu tek cumleyle Turkce acikla. Listedeki TUM projeleri dahil et.
+Gorev: her proje icin kullaniciya neden uygun oldugunu tek cumleyle Turkce acikla. Listedeki TUM projeleri dahil et, hicbirini atlama.
 Cikti formati kesin olarak: [{"projectId":"...","reason":"..."}]
 Baska aciklama veya kod blogu yazma.`;
 
@@ -99,7 +117,7 @@ Baska aciklama veya kod blogu yazma.`;
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
-        max_tokens: 512,
+        max_tokens: 900,
       }),
     });
 
