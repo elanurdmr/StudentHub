@@ -178,7 +178,7 @@ export default function Dashboard() {
           <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
             <div style={{ fontSize: '1.5rem', marginBottom: '.5rem' }}>💼</div>
             <p style={{ color: 'var(--muted)', fontSize: '.875rem' }}>
-              Profiliňe beceri ekleyince burada sana özel proje önerileri görünür.
+              Profiline beceri ekleyince burada sana özel proje önerileri görünür.
             </p>
             <Link to={`/profile/${user?._id}`} className="btn btn-primary btn-sm" style={{ marginTop: '.75rem', display: 'inline-block' }}>
               Beceri Ekle
